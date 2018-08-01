@@ -1,6 +1,11 @@
 
-class Promise::ResolvedPromise(Input) < TypedPromise(Input)
-  def initialize(@value : Input); end
+class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
+  def initialize(@value : Input)
+    super()
+  end
+
+  # return the value directly if the promise is resolved
+  getter value
 
   def then(&callback : Input -> _)
     result = nil
@@ -29,9 +34,16 @@ class Promise::ResolvedPromise(Input) < TypedPromise(Input)
     result.not_nil!
   end
 
-  def catch(&errback : Exception -> _)
-    promise = DeferredPromise(Input).new
-    promise.resolve(@value)
-    promise.catch(errback)
+  def resolved?
+    true
+  end
+
+  # defaults for resolved promises
+  def resolve(value)
+    self
+  end
+
+  def reject(reason)
+    self
   end
 end

@@ -1,30 +1,5 @@
 
 abstract class Promise; end
-abstract class TypedPromise(Input) < Promise
-  # A cool hack to grab the promise type
-  def type
-    t = uninitialized Input
-    t
-  end
-
-  def resolved?
-    true
-  end
-
-  # defaults for resolved promises
-  def resolve(value)
-    self
-  end
-
-  def reject(reason)
-    self
-  end
-
-  # pause the current fiber and wait for the resolution to occur
-  def value
-
-  end
-end
 
 require "./promise/*"
 
@@ -37,12 +12,9 @@ abstract class Promise
     {% end %}
   end
 
-  def reject(value)
-    if value.is_a? String
-      ::Promise::RejectedPromise(Nil).new(Exception.new(value))
-    else
-      ::Promise::RejectedPromise(Nil).new(value)
-    end
+  def self.reject(value)
+    value = Exception.new(value) if value.is_a? String
+    ::Promise::RejectedPromise(Nil).new(value)
   end
 
   # A cheeky way to force a value to be nilable
@@ -51,11 +23,8 @@ abstract class Promise
     def initialize(@value : Type?); end
   end
 
-  def resolve(value)
-    if value.class.nilable?
-      ::Promise::ResolvedPromise.new(value)
-    else
-      ::Promise::ResolvedPromise.new(Nilable.new(value).value)
-    end
+  def self.resolve(value)
+    value = Nilable.new(value).value if value.class.nilable?
+    ::Promise::ResolvedPromise.new(value)
   end
 end

@@ -1,5 +1,5 @@
 
-class Promise::DeferredPromise(Input) < TypedPromise(Input)
+class Promise::DeferredPromise(Input) < Promise
   def initialize
     @defer = Deferred(Input).new(self)
   end
@@ -22,6 +22,12 @@ class Promise::DeferredPromise(Input) < TypedPromise(Input)
   def reject(reason)
     # Check resolved here to avoid object creation
     defer.reject(reason) unless resolved?
+  end
+
+  # A cool hack to grab the promise type
+  def type
+    t = uninitialized Input
+    t
   end
 
   # Callback to be executed once the value is available
@@ -73,5 +79,24 @@ class Promise::DeferredPromise(Input) < TypedPromise(Input)
     result = DeferredPromise(typeof(errback_type)).new
     defer.pending_errback(wrapped_errback)
     result.not_nil!
+  end
+
+  # pause the current fiber and wait for the resolution to occur
+  def value
+    channel = Channel(Proc(Input)).new
+
+    spawn do
+      self.then do |value|
+        channel.send(-> { value })
+        nil
+      end
+
+      self.catch do |exception|
+        channel.send(-> { raise exception })
+        nil
+      end
+    end
+
+    channel.receive.call
   end
 end

@@ -2,8 +2,7 @@
 class Promise::Deferred(Input)
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
     @reference = nil
-    @callbacks = [] of Proc(Input, Nil)?
-    @errbacks = [] of Proc(Exception, Nil)?
+    @callbacks = [] of Proc(Input, Nil) | Proc(Exception, Nil)
   end
   
   @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input) | Nil
@@ -14,7 +13,6 @@ class Promise::Deferred(Input)
       reference.then(&callback)
     else
       @callbacks << callback
-      @errbacks << nil
     end
   end
 
@@ -23,13 +21,12 @@ class Promise::Deferred(Input)
     if reference
       reference.catch(&errback)
     else
-      @callbacks << nil
-      @errbacks << errback
+      @callbacks << errback
     end
   end
 
   def resolved?
-    !@reference
+    !!@reference
   end
 
   def resolve(value)
@@ -39,23 +36,22 @@ class Promise::Deferred(Input)
     reference = @reference = ref(value)
 
     # Ensure callbacks are called in strict order
-    @callbacks.each_index do |index|
-      callback = @callbacks[index]
-      if callback
-        reference.then(&callback)
+    @callbacks.each do |callback|
+      if callback.is_a? Proc(Exception, Nil)
+        reference.catch(&callback)
       else
-        reference.catch(&@errbacks[index].not_nil!)
+        reference.then(&callback)
       end
     end
 
     # Free the memory
     @callbacks.clear
-    @errbacks.clear
 
     @promise
   end
 
   def reject(reason)
+    reason = Exception.new(reason) if reason.is_a?(String)
     resolve(RejectedPromise(Input).new(reason))
   end
 

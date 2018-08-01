@@ -1,6 +1,12 @@
 
-class Promise::RejectedPromise(Input) < TypedPromise(Input)
-  def initialize(@rejection : Exception); end
+class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
+  def initialize(@rejection : Exception)
+    super()
+  end
+
+  def value
+    raise @rejection
+  end
 
   def catch(&errback : Exception -> _)
     result = nil
@@ -28,9 +34,16 @@ class Promise::RejectedPromise(Input) < TypedPromise(Input)
     result.not_nil!
   end
 
-  def then(&callback : Input -> _)
-    promise = DeferredPromise(Input).new
-    promise.reject(@rejection)
-    promise.then(callback)
+  def resolved?
+    true
+  end
+
+  # defaults for resolved promises
+  def resolve(value)
+    self
+  end
+
+  def reject(reason)
+    self
   end
 end
