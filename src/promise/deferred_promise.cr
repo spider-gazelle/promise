@@ -99,4 +99,31 @@ class Promise::DeferredPromise(Input) < Promise
 
     channel.receive.call
   end
+
+  def finally(&callback : (Exception | Input) -> _)
+    result = nil
+    callback_type = nil
+
+    wrapped_callback = Proc((Exception | Input), Nil).new { |value|
+      begin
+        ret = callback.call(value)
+        if ret.is_a?(Promise)
+          callback_type = ret.type
+        else 
+          callback_type = ret
+        end
+
+        result.not_nil!.resolve(ret)
+      rescue error
+        # TODO:: provide logger for unhandled exceptions
+        result.not_nil!.reject(error)
+      end
+    }
+
+    self.then { |result| wrapped_callback.call(result); nil }
+    self.catch { |error| wrapped_callback.call(error); nil }
+
+    result = DeferredPromise(typeof(callback_type)).new
+    result.not_nil!
+  end
 end

@@ -12,10 +12,7 @@ describe Promise do
   describe "resolve" do
     it "should call the callback in the next turn" do
       p = Promise.new(Symbol)
-      p.then do |value|
-        Log << value
-        Wait.send(true)
-      end
+      p.then { |value| Log << value; Wait.send(true) }
       p.resolve(:foo)
 
       # wait for resolution
@@ -25,9 +22,7 @@ describe Promise do
 
     it "can modify the result of a promise before returning" do
       p = Promise.new(Symbol)
-      change = p.then do |value|
-        "value type change #{value}"
-      end
+      change = p.then { |value| "value type change #{value}" }
       p.resolve(:foo)
 
       # wait for resolution
@@ -51,12 +46,8 @@ describe Promise do
 
     it "should fulfill success callbacks in the registration order" do
       p = Promise.new(Symbol)
-      p.then do |value|
-        Log << :first
-      end
-      p.then do |value|
-        Log << :second
-      end
+      p.then { |value| Log << :first }
+      p.then { |value| Log << :second }
       p.resolve(:foo)
       p.value
 
@@ -65,15 +56,10 @@ describe Promise do
 
     it "should do nothing if a promise was previously resolved" do
       p = Promise.new(Symbol)
-      p.then do |value|
-        Log << value.not_nil!
-      end
+      p.then { |value| Log << value.not_nil! }
       p.resolve(:first)
       p.resolve(:second)
-      p.then do |value|
-        Log << value
-        Wait.send(true)
-      end
+      p.then { |value| Log << value; Wait.send(true) }
       p.resolve(:second)
 
       Wait.receive
@@ -82,9 +68,7 @@ describe Promise do
 
     it "should allow deferred resolution with a new promise" do
       p1 = Promise.new(Symbol)
-      p1.then do |value|
-        Log << value
-      end
+      p1.then { |value| Log << value }
       p2 = Promise.new(Symbol)
       p1.resolve(p2)
       p2.resolve(:foo)
@@ -178,6 +162,37 @@ describe Promise do
       Log.should eq([:foo, :alt, :error1, :error2, :was_number])
     end
 
-    
+    describe "finally" do
+      describe "when the promise is fulfilled" do
+        it "should call the callback" do
+          p = Promise.new(Symbol)
+          p.finally { |value| Log << :finally }
+          p.resolve(:foo)
+          p.value
+
+          Log.should eq([:finally])
+        end
+
+        it "should fulfill with the original value" do
+          p = Promise.new(Symbol)
+          other = p.finally { |value| Log << :finally; :test }.then { |result| Log << result }
+          p.resolve(:foo)
+          other.value
+
+          Log.should eq([:finally, :test])
+        end
+
+        it "should reject with this new exception" do
+          p = Promise.new(Symbol)
+          fin = p.finally { |value| Log << :finally; raise "error" }
+          fin.then { |result| Log << :no_error; Wait.send(true) }
+          fin.catch { |error| Log << :error; Wait.send(true) }
+          p.resolve(:foo)
+
+          Wait.receive
+          Log.should eq([:finally, :error])
+        end
+      end
+    end
   end
 end
