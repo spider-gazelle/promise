@@ -120,18 +120,32 @@ class Promise::DeferredPromise(Input) < Promise
     channel = Channel(Proc(Input)).new
 
     spawn do
-      self.then do |value|
-        channel.send(-> { value })
+      self.then(->(result : Input) {
+        channel.send(-> { result })
         nil
-      end
-
-      self.catch do |exception|
-        channel.send(-> { raise exception })
+      }, ->(rejection : Exception) {
+        channel.send(-> { raise rejection })
         nil
-      end
+      })
     end
 
     channel.receive.call
+  end
+
+  def raw_value
+    channel = Channel(Input | Exception).new
+
+    spawn do
+      self.then(->(result : Input) {
+        channel.send(result)
+        nil
+      }, ->(rejection : Exception) {
+        channel.send(rejection)
+        nil
+      })
+    end
+
+    channel.receive
   end
 
   def finally(&callback : (Exception | Nil) -> _)

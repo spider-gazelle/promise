@@ -19,10 +19,7 @@ abstract class Promise
     {% end %}
   end
 
-  def type : Class
-    Promise
-  end
-
+  abstract def type : Class
   abstract def finally(&callback : (Exception | Nil) -> _) : Promise
 
   # A cheeky way to force a value to be nilable
