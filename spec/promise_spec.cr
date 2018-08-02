@@ -299,5 +299,15 @@ describe Promise do
         error.message.should eq "what what"
       end
     end
+
+    it "should be possible to grab the raw value without raising an exception" do
+      p = Promise.new(Symbol)
+      p.resolve(:foo)
+      p.raw_value.should eq(:foo)
+
+      p = Promise.new(Symbol)
+      p.reject("failed")
+      p.raw_value.is_a?(Exception).should eq(true)
+    end
   end
 end
