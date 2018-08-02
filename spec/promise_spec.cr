@@ -187,87 +187,116 @@ describe Promise do
       Wait.receive
       Log.should eq([:error1])
     end
+  end
 
-    describe "finally" do
-      describe "when the promise is fulfilled" do
-        it "should call the callback" do
-          p = Promise.new(Symbol)
-          p.finally { |value| Log << :finally }
-          p.resolve(:foo)
-          p.value
+  describe "finally" do
+    it "should call the callback" do
+      p = Promise.new(Symbol)
+      p.finally { |value| Log << :finally }
+      p.resolve(:foo)
+      p.value
 
-          Log.should eq([:finally])
-        end
+      Log.should eq([:finally])
+    end
 
-        it "should fulfill with the original value" do
-          p = Promise.new(Symbol)
-          other = p.finally { |value| Log << :finally; :test }.then { |result| Log << result }
-          p.resolve(:foo)
-          other.value
+    it "should fulfill with the original value" do
+      p = Promise.new(Symbol)
+      other = p.finally { |value| Log << :finally; :test }.then { |result| Log << result }
+      p.resolve(:foo)
+      other.value
 
-          Log.should eq([:finally, :test])
-        end
+      Log.should eq([:finally, :test])
+    end
 
-        it "should reject with this new exception" do
-          p = Promise.new(Symbol)
-          fin = p.finally { |value| Log << :finally; raise "error" }
-          fin.then { |result| Log << :no_error; Wait.send(true) }
-          fin.catch { |error| Log << :error; Wait.send(true) }
-          p.resolve(:foo)
+    it "should reject with this new exception" do
+      p = Promise.new(Symbol)
+      fin = p.finally { |value| Log << :finally; raise "error" }
+      fin.then { |result| Log << :no_error; Wait.send(true) }
+      fin.catch { |error| Log << :error; Wait.send(true) }
+      p.resolve(:foo)
 
-          Wait.receive
-          Log.should eq([:finally, :error])
-        end
+      Wait.receive
+      Log.should eq([:finally, :error])
+    end
 
-        it "should fulfill with the original reason after that promise resolves" do
-          p1 = Promise.new(Symbol)
-          p2 = Promise.new(Symbol)
-          p1.finally { |value|
-            Log << :finally; p2
-          }.then { |result|
-            Log << result
-            Wait.send(true)
-          }
-          
-          p1.resolve(:fin)
+    it "should fulfill with the original reason after that promise resolves" do
+      p1 = Promise.new(Symbol)
+      p2 = Promise.new(Symbol)
+      p1.finally { |value|
+        Log << :finally; p2
+      }.then { |result|
+        Log << result
+        Wait.send(true)
+      }
+      
+      p1.resolve(:fin)
 
+      delay(0) do
+        delay(0) do
           delay(0) do
-            delay(0) do
-              delay(0) do
-                Log << :resolving
-                p2.resolve(:foo)
-              end
-            end
+            Log << :resolving
+            p2.resolve(:foo)
           end
-
-          Wait.receive
-          Log.should eq([:finally, :resolving, :foo])
         end
+      end
 
-        it "should reject with the new reason when it is rejected" do
-          p1 = Promise.new(Symbol)
-          p2 = Promise.new(Symbol)
-          p1.finally { |value|
-            Log << :finally; p2
-          }.catch { |error|
-            Log << :error
-            Wait.send(true)
-          }
-          
-          p1.resolve(:fin)
+      Wait.receive
+      Log.should eq([:finally, :resolving, :foo])
+    end
 
+    it "should reject with the new reason when it is rejected" do
+      p1 = Promise.new(Symbol)
+      p2 = Promise.new(Symbol)
+      p1.finally { |value|
+        Log << :finally; p2
+      }.catch { |error|
+        Log << :error
+        Wait.send(true)
+      }
+      
+      p1.resolve(:fin)
+
+      delay(0) do
+        delay(0) do
           delay(0) do
-            delay(0) do
-              delay(0) do
-                Log << :rejecting
-                p2.reject("error")
-              end
-            end
+            Log << :rejecting
+            p2.reject("error")
           end
-
-          Wait.receive
-          Log.should eq([:finally, :rejecting, :error])
         end
+      end
+
+      Wait.receive
+      Log.should eq([:finally, :rejecting, :error])
+    end
+  end
+
+  describe "value" do
+    it "should resolve a promise value as a future" do
+      p = Promise.new(Symbol)
+      p.resolve(:foo)
+      p.value.should eq(:foo)
+    end
+
+    it "should reject a promise value as a future" do
+      p = Promise.new(Symbol)
+      p.reject("error!")
+
+      begin
+        p.value
+      rescue error
+        error.message.should eq "error!"
+      end
+    end
+
+    it "should pass through exceptions" do
+      p = Promise.new(Symbol)
+      result = p.then { raise "what what" }
+      p.resolve(:test)
+
+      begin
+        result.value
+      rescue error
+        error.message.should eq "what what"
       end
     end
   end

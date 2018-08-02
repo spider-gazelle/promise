@@ -25,9 +25,13 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   # A cool hack to grab the promise type
-  def type
+  def type_var
     t = uninitialized Input
     t
+  end
+
+  def type
+    Input
   end
 
   def then(callback : Input -> _, errback : Exception -> _)
@@ -38,7 +42,7 @@ class Promise::DeferredPromise(Input) < Promise
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)
-          callback_type = ret.type
+          callback_type = ret.type_var
         else 
           callback_type = ret
         end
@@ -72,7 +76,7 @@ class Promise::DeferredPromise(Input) < Promise
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)
-          callback_type = ret.type
+          callback_type = ret.type_var
         else 
           callback_type = ret
         end
@@ -130,15 +134,15 @@ class Promise::DeferredPromise(Input) < Promise
     channel.receive.call
   end
 
-  def finally(&callback : (Exception | Input) -> _)
+  def finally(&callback : (Exception | Nil) -> _)
     result = nil
     callback_type = nil
 
-    wrapped_callback = Proc((Exception | Input), Nil).new { |value|
+    wrapped_callback = Proc((Exception | Nil), Nil).new { |value|
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)
-          callback_type = ret.type
+          callback_type = ret.type_var
         else 
           callback_type = ret
         end
@@ -150,7 +154,7 @@ class Promise::DeferredPromise(Input) < Promise
     }
 
     self.then(->(result : Input) {
-      wrapped_callback.call(result)
+      wrapped_callback.call(nil)
       nil
     }, ->(error : Exception) {
       wrapped_callback.call(error)

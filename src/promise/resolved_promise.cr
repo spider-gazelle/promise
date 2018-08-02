@@ -17,7 +17,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)
-          callback_type = ret.type
+          callback_type = ret.type_var
         else 
           callback_type = ret
         end
