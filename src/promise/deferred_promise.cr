@@ -46,39 +46,36 @@ class Promise::DeferredPromise(Input) < Promise
 
         result.not_nil!.resolve(ret)
       rescue error
-        # TODO:: provide logger for unhandled exceptions
         result.not_nil!.reject(error)
       end
     }
 
     result = DeferredPromise(typeof(callback_type)).new
-    defer.pending_callback(wrapped_callback)
+    defer.pending(wrapped_callback, ->(reason : Exception) {
+      result.not_nil!.reject(reason)
+      nil
+    })
     result.not_nil!
   end
 
   # Callback to execute if an error occurs
   def catch(&errback : Exception -> _)
-    result = nil
-    errback_type = nil
+    result = DeferredPromise(Input).new
 
     wrapped_errback = Proc(Exception, Nil).new { |reason|
       begin
         ret = errback.call(reason)
-        if ret.is_a?(Promise)
-          errback_type = ret.type
-        else 
-          errback_type = ret
-        end
-        result.not_nil!.resolve(ret)
+        result.resolve(ret)
       rescue error
-        # TODO:: provide logger for unhandled exceptions
-        result.not_nil!.reject(error)
+        result.reject(error)
       end
     }
 
-    result = DeferredPromise(typeof(errback_type)).new
-    defer.pending_errback(wrapped_errback)
-    result.not_nil!
+    defer.pending(->(value : Input) {
+      result.resolve(value)
+      nil
+    }, wrapped_errback)
+    result
   end
 
   # pause the current fiber and wait for the resolution to occur
@@ -115,7 +112,6 @@ class Promise::DeferredPromise(Input) < Promise
 
         result.not_nil!.resolve(ret)
       rescue error
-        # TODO:: provide logger for unhandled exceptions
         result.not_nil!.reject(error)
       end
     }

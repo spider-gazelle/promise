@@ -96,8 +96,8 @@ describe Promise do
   describe "reject" do
     it "should reject the promise and execute all error callbacks" do
       p = Promise.new(Symbol)
-      p.catch { |result| Log << :first }
-      p.catch { |result| Log << :second; Wait.send(true) }
+      p.catch { |result| Log << :first; :error1 }
+      p.catch { |result| Log << :second; Wait.send(true); :error2 }
       p.reject("failed")
 
       Wait.receive
@@ -107,7 +107,7 @@ describe Promise do
     it "should do nothing if a promise was previously rejected" do
       p = Promise.new(Symbol)
       p.then { |result| Log << :then; Wait.send(true) }
-      p.catch { |result| Log << :catch; Wait.send(true) }
+      p.catch { |result| Log << :catch; Wait.send(true); :error1 }
       p.reject("failed")
       p.resolve(:foo)
 
@@ -119,10 +119,10 @@ describe Promise do
   describe "then" do
     it "should notify all callbacks with the original value" do
       p = Promise.new(Symbol)
-      p.catch { |error| Log << :error }
+      p.catch { |error| Log << :error; :error1 }
       p.then { |result| Log << result; :alt }
       p.then { |result| Log << result; "str" }
-      p.then { |result| Log << result; Promise.reject("error") }
+      p.then { |result| Log << result; Promise.reject(Symbol, "error") }
       p.then { |result| Log << result; Wait.send(true) }
       p.resolve(:foo)
       Wait.receive
@@ -132,10 +132,10 @@ describe Promise do
     it "should reject all callbacks with the original reason" do
       p = Promise.new(Symbol)
       p.then { |result| Log << :bad }
-      p.catch { |error| Log << :good; :alt }
-      p.catch { |error| Log << :good; "str" }
-      p.catch { |error| Log << :good; Promise.reject("error") }
-      p.catch { |error| Log << :good; Wait.send(true) }
+      p.catch { |error| Log << :good; :error1 }
+      p.catch { |error| Log << :good; :error2 }
+      p.catch { |error| Log << :good; Promise.reject(Symbol, "error") }
+      p.catch { |error| Log << :good; Wait.send(true); :error4 }
       p.reject("some error")
       Wait.receive
       Log.should eq([:good, :good, :good, :good])
@@ -144,22 +144,48 @@ describe Promise do
     it "should propagate resolution and rejection between dependent promises" do
       p = Promise.new(Symbol)
       p.then { |result| Log << result; :alt }
-        .then { |result| Log << result; raise "error" }
+        .then { |result| Log << result; raise "error"; :type }
         .catch do |error|
           Log << :error1 if error.message == "error"
-          Promise.reject("error2")
+          Promise.reject(Symbol, "error2")
         end
         .catch do |error|
           Log << :error2 if error.message == "error2"
-          1234
+          :resolved
         end
         .then do |result|
-          Log << :was_number if result == 1234
+          Log << :was_number if result == :resolved
           Wait.send(true)
         end
       p.resolve(:foo)
       Wait.receive
       Log.should eq([:foo, :alt, :error1, :error2, :was_number])
+    end
+
+    it "should propagate success through rejection only promises" do
+      p = Promise.new(Symbol)
+      p.catch { |error| Log << :error1; :error1 }
+        .catch { |error| Log << :error2; :error2 }
+        .then do |result|
+          Log << result
+          Wait.send(true)
+        end
+      p.resolve(:foo)
+      Wait.receive
+      Log.should eq([:foo])
+    end
+
+    it "should propagate rejections through resolution only promises" do
+      p = Promise.new(Symbol)
+      p.then { |result| Log << result; :alt }
+        .then { |result| Log << result }
+        .catch do |error|
+          Log << :error1 if error.message == "errors all the way down"
+          Wait.send(true)
+        end
+      p.reject("errors all the way down")
+      Wait.receive
+      Log.should eq([:error1])
     end
 
     describe "finally" do
@@ -191,6 +217,56 @@ describe Promise do
 
           Wait.receive
           Log.should eq([:finally, :error])
+        end
+
+        it "should fulfill with the original reason after that promise resolves" do
+          p1 = Promise.new(Symbol)
+          p2 = Promise.new(Symbol)
+          p1.finally { |value|
+            Log << :finally; p2
+          }.then { |result|
+            Log << result
+            Wait.send(true)
+          }
+          
+          p1.resolve(:fin)
+
+          delay(0) do
+            delay(0) do
+              delay(0) do
+                Log << :resolving
+                p2.resolve(:foo)
+              end
+            end
+          end
+
+          Wait.receive
+          Log.should eq([:finally, :resolving, :foo])
+        end
+
+        it "should reject with the new reason when it is rejected" do
+          p1 = Promise.new(Symbol)
+          p2 = Promise.new(Symbol)
+          p1.finally { |value|
+            Log << :finally; p2
+          }.catch { |error|
+            Log << :error
+            Wait.send(true)
+          }
+          
+          p1.resolve(:fin)
+
+          delay(0) do
+            delay(0) do
+              delay(0) do
+                Log << :rejecting
+                p2.reject("error")
+              end
+            end
+          end
+
+          Wait.receive
+          Log.should eq([:finally, :rejecting, :error])
         end
       end
     end

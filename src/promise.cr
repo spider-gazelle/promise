@@ -1,8 +1,4 @@
 
-abstract class Promise; end
-
-require "./promise/*"
-
 abstract class Promise
   macro new(type)
     {% if type.id.stringify.includes?('?') || type.id.stringify == "Nil" || type.id.stringify.includes?(" Nil") || type.id.stringify.includes?("Nil ")  %}
@@ -12,9 +8,15 @@ abstract class Promise
     {% end %}
   end
 
-  def self.reject(value)
+  macro reject(type, reason)
+    value = {{reason}}
     value = Exception.new(value) if value.is_a? String
-    ::Promise::RejectedPromise(Nil).new(value)
+
+    {% if type.id.stringify.includes?('?') || type.id.stringify == "Nil" || type.id.stringify.includes?(" Nil") || type.id.stringify.includes?("Nil ")  %}
+      ::Promise::RejectedPromise({{type.id}}).new(value)
+    {% else %}
+      ::Promise::RejectedPromise({{type.id}}?).new(value)
+    {% end %}
   end
 
   # A cheeky way to force a value to be nilable
@@ -28,3 +30,5 @@ abstract class Promise
     ::Promise::ResolvedPromise.new(value)
   end
 end
+
+require "./promise/*"

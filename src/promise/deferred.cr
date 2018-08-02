@@ -2,26 +2,18 @@
 class Promise::Deferred(Input)
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
     @reference = nil
-    @callbacks = [] of Proc(Input, Nil) | Proc(Exception, Nil)
+    @callbacks = [] of {Proc(Input, Nil), Proc(Exception, Nil)}
   end
   
   @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input) | Nil
 
-  def pending_callback(callback)
+  def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Nil))
     reference = @reference
     if reference
-      reference.then(&callback)
+      reference.then(&resolution)
+      reference.catch(&rejection)
     else
-      @callbacks << callback
-    end
-  end
-
-  def pending_errback(errback)
-    reference = @reference
-    if reference
-      reference.catch(&errback)
-    else
-      @callbacks << errback
+      @callbacks << {resolution, rejection}
     end
   end
 
@@ -37,11 +29,8 @@ class Promise::Deferred(Input)
 
     # Ensure callbacks are called in strict order
     @callbacks.each do |callback|
-      if callback.is_a? Proc(Exception, Nil)
-        reference.catch(&callback)
-      else
-        reference.then(&callback)
-      end
+      reference.then(&callback[0])
+      reference.catch(&callback[1])
     end
 
     # Free the memory
