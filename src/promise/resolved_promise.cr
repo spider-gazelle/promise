@@ -24,7 +24,6 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
 
         result.not_nil!.resolve(ret)
       rescue error
-        # TODO:: provide logger for unhandled exceptions
         result.not_nil!.reject(error)
       end
       nil

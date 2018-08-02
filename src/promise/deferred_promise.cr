@@ -30,6 +30,39 @@ class Promise::DeferredPromise(Input) < Promise
     t
   end
 
+  def then(callback : Input -> _, errback : Exception -> _)
+    result = nil
+    callback_type = nil
+
+    wrapped_callback = Proc(Input, Nil).new { |value|
+      begin
+        ret = callback.call(value)
+        if ret.is_a?(Promise)
+          callback_type = ret.type
+        else 
+          callback_type = ret
+        end
+
+        result.not_nil!.resolve(ret)
+      rescue error
+        result.not_nil!.reject(error)
+      end
+    }
+
+    wrapped_errback = Proc(Exception, Nil).new { |reason|
+      begin
+        ret = errback.call(reason)
+        result.not_nil!.resolve(ret)
+      rescue error
+        result.not_nil!.reject(error)
+      end
+    }
+
+    result = DeferredPromise(typeof(callback_type)).new
+    defer.pending(wrapped_callback, wrapped_errback)
+    result.not_nil!
+  end
+
   # Callback to be executed once the value is available
   def then(&callback : Input -> _)
     result = nil
@@ -116,8 +149,13 @@ class Promise::DeferredPromise(Input) < Promise
       end
     }
 
-    self.then { |result| wrapped_callback.call(result); nil }
-    self.catch { |error| wrapped_callback.call(error); nil }
+    self.then(->(result : Input) {
+      wrapped_callback.call(result)
+      nil
+    }, ->(error : Exception) {
+      wrapped_callback.call(error)
+      nil
+    })
 
     result = DeferredPromise(typeof(callback_type)).new
     result.not_nil!
