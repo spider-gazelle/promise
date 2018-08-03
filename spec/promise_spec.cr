@@ -379,14 +379,14 @@ describe Promise do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)
       delay(0) { p2.resolve("testing") }
-      val = Promise.race(p1, p2).value.not_nil!
+      val = Promise.race(p1, p2).value
       val.should eq :foo
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
       delay(0) { p2.resolve("testing") }
       delay(0.002) { p1.resolve(:foo) }
-      val = Promise.race(p1, p2).value.not_nil!
+      val = Promise.race(p1, p2).value
       val.should eq "testing"
     end
 
@@ -396,7 +396,7 @@ describe Promise do
       delay(0) { p2.resolve("testing") }
 
       begin
-        val = Promise.race(p1, p2).value.not_nil!
+        val = Promise.race(p1, p2).value
         raise "should not make it here"
       rescue error
         error.message.should eq "err"
@@ -408,7 +408,7 @@ describe Promise do
       delay(0.002) { p1.resolve(:foo) }
 
       begin
-        val = Promise.race(p1, p2).value.not_nil!
+        val = Promise.race(p1, p2).value
         raise "should not make it here"
       rescue error
         error.message.should eq "testing"

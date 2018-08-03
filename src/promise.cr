@@ -79,17 +79,14 @@ abstract class Promise
   # returns the first promise to either reject or complete
   collective_action :race do |promises|
     result = DeferredPromise(typeof(promises.map(&.type_var)[0]?)).new
-    delay(0) do
-      promises.each do |promise|
-        promise.finally do
-          begin
-            result.resolve(promise.value)
-          rescue error
-            result.reject error
-          end
+    promises.each do |promise|
+      promise.finally do
+        begin
+          result.resolve(promise.value)
+        rescue error
+          result.reject error
         end
       end
-      nil
     end
     result
   end
