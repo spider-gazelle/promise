@@ -231,9 +231,9 @@ describe Promise do
       
       p1.resolve(:fin)
 
-      delay(0) do
-        delay(0) do
-          delay(0) do
+      spawn do
+        spawn do
+          spawn do
             Log << :resolving
             p2.resolve(:foo)
           end
@@ -256,9 +256,9 @@ describe Promise do
       
       p1.resolve(:fin)
 
-      delay(0) do
-        delay(0) do
-          delay(0) do
+      spawn do
+        spawn do
+          spawn do
             Log << :rejecting
             p2.reject("error")
           end
@@ -378,13 +378,13 @@ describe Promise do
     it "should return the first promise to be resolved" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)
-      delay(0) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
       val = Promise.race(p1, p2).value
       val.should eq :foo
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      delay(0) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
       delay(0.002) { p1.resolve(:foo) }
       val = Promise.race(p1, p2).value
       val.should eq "testing"
@@ -393,7 +393,7 @@ describe Promise do
     it "should return the first promise to be rejected" do
       p1 = Promise.new(Symbol).reject("err")
       p2 = Promise.new(String)
-      delay(0) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
 
       begin
         val = Promise.race(p1, p2).value
@@ -404,7 +404,7 @@ describe Promise do
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      delay(0) { p2.reject("testing") }
+      spawn { p2.reject("testing") }
       delay(0.002) { p1.resolve(:foo) }
 
       begin
