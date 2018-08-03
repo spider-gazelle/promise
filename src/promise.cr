@@ -54,7 +54,6 @@ abstract class Promise
       rescue error
         promise.not_nil!.reject(error)
       end
-      nil
     end
 
     # Return a promise that can be used to grab the result
