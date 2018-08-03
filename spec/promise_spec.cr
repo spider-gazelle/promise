@@ -319,6 +319,12 @@ describe Promise do
   end
 
   describe "Promise all" do
+    it "should resolve if no promises are passed" do
+      result = Promise.all.value.not_nil!
+      result[0]?.should eq nil
+      result.size.should eq 0
+    end
+
     it "should resolve promises and return an array of values" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String).resolve("testing")
@@ -375,6 +381,15 @@ describe Promise do
   end
 
   describe "Promise race" do
+    it "should throw error if no promises are passed" do
+      begin
+        result = Promise.race.value
+        raise "no get here"
+      rescue error
+        error.message.should eq "no promises provided to race"
+      end
+    end
+
     it "should return the first promise to be resolved" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)

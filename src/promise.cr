@@ -98,6 +98,7 @@ abstract class Promise
 
   # returns the first promise to either reject or complete
   collective_action :race do |promises|
+    raise "no promises provided to race" if promises.empty? 
     result = DeferredPromise(typeof(promises.map(&.type_var)[0]?)).new
     promises.each do |promise|
       promise.finally do
