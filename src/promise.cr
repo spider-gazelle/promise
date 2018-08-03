@@ -41,6 +41,27 @@ abstract class Promise
     ::Promise::ResolvedPromise.new(value)
   end
 
+  # Execute code in the next tick of the event loop
+  # and return a promise for obtaining the value
+  def self.defer(&block : -> _)
+    result = nil
+    promise = nil
+
+    delay(0) do
+      begin
+        result = block.call
+        promise.not_nil!.resolve(result)
+      rescue error
+        promise.not_nil!.reject(error)
+      end
+      nil
+    end
+
+    # Return a promise that can be used to grab the result
+    promise = ::Promise::DeferredPromise(typeof(result)).new
+    promise.not_nil!
+  end
+
   # this drys up the code dealing with splats and enumerables
   macro collective_action(name, &block)
     def self.{{name.id}}(*promises)

@@ -415,4 +415,25 @@ describe Promise do
       end
     end
   end
+
+  describe "deferred code" do
+    it "should run some code asynchronously" do
+      result = Promise.defer {
+        {123, "string"}
+      }.value.not_nil!
+
+      result.should eq({123, "string"})
+    end
+
+    it "should return errors asynchronously" do
+      begin
+        Promise.defer {
+          raise "an error occured"
+        }.value
+        raise "no go"
+      rescue result
+        result.message.should eq("an error occured")
+      end
+    end
+  end
 end
