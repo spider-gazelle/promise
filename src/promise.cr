@@ -32,6 +32,24 @@ abstract class Promise
     value = Nilable.new(value).value if value.class.nilable?
     ::Promise::ResolvedPromise.new(value)
   end
+
+  def self.all(*promises)
+    values = nil
+    callback = -> {
+      values = promises.map { |promise| promise.value }
+      nil
+    }
+    result = DeferredPromise(typeof(values)).new
+    spawn do
+      begin
+        callback.call
+        result.resolve(values.not_nil!)
+      rescue error
+        result.reject(error)
+      end
+    end
+    result
+  end
 end
 
 require "./promise/*"

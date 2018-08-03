@@ -21,7 +21,8 @@ class Promise::DeferredPromise(Input) < Promise
 
   def reject(reason)
     # Check resolved here to avoid object creation
-    defer.reject(reason) unless resolved?
+    return self if resolved?
+    defer.reject(reason)
   end
 
   # A cool hack to grab the promise type
@@ -124,7 +125,7 @@ class Promise::DeferredPromise(Input) < Promise
         channel.send(-> { result })
         nil
       }, ->(rejection : Exception) {
-        channel.send(-> { raise rejection })
+        channel.send(-> { raise rejection; self.type_var })
         nil
       })
     end

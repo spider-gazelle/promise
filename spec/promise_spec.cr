@@ -310,4 +310,27 @@ describe Promise do
       p.raw_value.is_a?(Exception).should eq(true)
     end
   end
+
+  describe "Promise all" do
+    it "should resolve promises and return an array of values" do
+      p1 = Promise.new(Symbol).resolve(:foo)
+      p2 = Promise.new(String).resolve("testing")
+      val1, val2 = Promise.all(p1, p2).value.not_nil!
+
+      val1.should eq :foo
+      val2.should eq "testing"
+    end
+
+    it "should reject promise if there are any failures" do
+      p1 = Promise.new(Symbol).resolve(:foo)
+      p2 = Promise.new(String).reject("testing")
+
+      begin
+        val1, val2 = Promise.all(p1, p2).value.not_nil!
+        raise "should not make it here"
+      rescue error
+        error.message.should eq "testing"
+      end
+    end
+  end
 end
