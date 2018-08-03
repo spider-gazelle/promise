@@ -268,6 +268,13 @@ describe Promise do
       Wait.receive
       Log.should eq([:finally, :rejecting, :error])
     end
+
+    it "should work with generic types" do
+      array = [] of Promise
+      array << Promise.new(Symbol).resolve(:foo)
+      array[0].finally { |value| Log << :finally }.value
+      Log.should eq([:finally])
+    end
   end
 
   describe "value" do
@@ -341,6 +348,71 @@ describe Promise do
 
       val1.should eq :foo
       val2.should eq "testing"
+    end
+
+    it "should work with unknown or generic jobs that are successful" do
+      array = [] of Promise
+      array << Promise.new(Symbol).resolve(:foo)
+      array << Promise.new(String).resolve("testing")
+
+      val1, val2 = Promise.all(array.map(&.then)).value.not_nil!
+      val1.should eq nil
+      val2.should eq nil
+    end
+
+    it "should work with unknown or generic jobs that fail" do
+      array = [] of Promise
+      array << Promise.new(Symbol).resolve(:foo)
+      array << Promise.new(String).reject("testing")
+
+      begin
+        val1, val2 = Promise.all(array.map(&.then)).value.not_nil!
+        raise "should not make it here"
+      rescue error
+        error.message.should eq "testing"
+      end
+    end
+  end
+
+  describe "Promise race" do
+    it "should return the first promise to be resolved" do
+      p1 = Promise.new(Symbol).resolve(:foo)
+      p2 = Promise.new(String)
+      delay(0) { p2.resolve("testing") }
+      val = Promise.race(p1, p2).value.not_nil!
+      val.should eq :foo
+
+      p1 = Promise.new(Symbol)
+      p2 = Promise.new(String)
+      delay(0) { p2.resolve("testing") }
+      delay(0.002) { p1.resolve(:foo) }
+      val = Promise.race(p1, p2).value.not_nil!
+      val.should eq "testing"
+    end
+
+    it "should return the first promise to be rejected" do
+      p1 = Promise.new(Symbol).reject("err")
+      p2 = Promise.new(String)
+      delay(0) { p2.resolve("testing") }
+
+      begin
+        val = Promise.race(p1, p2).value.not_nil!
+        raise "should not make it here"
+      rescue error
+        error.message.should eq "err"
+      end
+
+      p1 = Promise.new(Symbol)
+      p2 = Promise.new(String)
+      delay(0) { p2.reject("testing") }
+      delay(0.002) { p1.resolve(:foo) }
+
+      begin
+        val = Promise.race(p1, p2).value.not_nil!
+        raise "should not make it here"
+      rescue error
+        error.message.should eq "testing"
+      end
     end
   end
 end

@@ -19,8 +19,15 @@ abstract class Promise
     {% end %}
   end
 
+  # Interfaces available to generic types
   abstract def type : Class
-  abstract def finally(&callback : (Exception | Nil) -> _) : Promise
+  abstract def then : DeferredPromise(Nil)
+  def finally(&callback : (Exception | Nil) -> _)
+    self.then.finally(&callback)
+  end
+  def catch(&errback : Exception -> _)
+    self.then.catch(&errback)
+  end
 
   # A cheeky way to force a value to be nilable
   class Nilable(Type)
@@ -28,26 +35,33 @@ abstract class Promise
     def initialize(@value : Type?); end
   end
 
+  # Returns a resolved promise of the type passed
   def self.resolve(value)
     value = Nilable.new(value).value if value.class.nilable?
     ::Promise::ResolvedPromise.new(value)
   end
 
-  # Promise#all for Tuples
-  def self.all(*promises)
-    all_common(promises)
+  # this drys up the code dealing with splats and enumerables
+  macro collective_action(name, &block)
+    def self.{{name.id}}(*promises)
+      {{name.id}}_common(promises)
+    end
+
+    def self.{{name.id}}(promises)
+      promises = promises.flatten
+      {{name.id}}_common(promises)
+    end
+
+    def self.{{name.id}}_common(promises)
+      {{block.body}}
+    end
   end
 
-  # Promise#all for Enumerables
-  def self.all(promises)
-    promises = promises.flatten
-    all_common(promises)
-  end
-
-  def self.all_common(promises)
+  # Returns the result of all the promises or the first failure
+  collective_action :all do |promises|
     values = nil
     callback = -> {
-      values = promises.map { |promise| promise.value }
+      values = promises.map(&.value)
       nil
     }
     result = DeferredPromise(typeof(values)).new
@@ -58,6 +72,24 @@ abstract class Promise
       rescue error
         result.reject(error)
       end
+    end
+    result
+  end
+
+  # returns the first promise to either reject or complete
+  collective_action :race do |promises|
+    result = DeferredPromise(typeof(promises.map(&.type_var)[0]?)).new
+    delay(0) do
+      promises.each do |promise|
+        promise.finally do
+          begin
+            result.resolve(promise.value)
+          rescue error
+            result.reject error
+          end
+        end
+      end
+      nil
     end
     result
   end

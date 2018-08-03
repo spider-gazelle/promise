@@ -96,6 +96,11 @@ class Promise::DeferredPromise(Input) < Promise
     result.not_nil!
   end
 
+  # Used to create a generic promise if all we care about is success or failure
+  def then
+    self.then { nil }
+  end
+
   # Callback to execute if an error occurs
   def catch(&errback : Exception -> _)
     result = DeferredPromise(Input).new
