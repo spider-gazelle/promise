@@ -13,7 +13,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
     value = @value
 
     # Execute next tick
-    delay(0) do
+    spawn do
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)

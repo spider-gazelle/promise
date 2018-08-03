@@ -13,7 +13,7 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     reason = @rejection
 
     # Execute next tick
-    delay(0) do
+    spawn do
       begin
         ret = errback.call(reason)
         result.resolve(ret)

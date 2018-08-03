@@ -47,7 +47,7 @@ abstract class Promise
     result = nil
     promise = nil
 
-    delay(0) do
+    spawn do
       begin
         result = block.call
         promise.not_nil!.resolve(result)
