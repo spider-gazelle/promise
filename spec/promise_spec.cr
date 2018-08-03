@@ -332,5 +332,15 @@ describe Promise do
         error.message.should eq "testing"
       end
     end
+
+    it "should work when promises are supplied as an array" do
+      p1 = Promise.new(Symbol).resolve(:foo)
+      p2 = Promise.new(String).resolve("testing")
+      array = [p1, p2]
+      val1, val2 = Promise.all(array).value.not_nil!
+
+      val1.should eq :foo
+      val2.should eq "testing"
+    end
   end
 end

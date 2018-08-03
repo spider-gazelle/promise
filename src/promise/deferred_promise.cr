@@ -125,6 +125,8 @@ class Promise::DeferredPromise(Input) < Promise
         channel.send(-> { result })
         nil
       }, ->(rejection : Exception) {
+        # We provide the type_var here as a hint to the compiler
+        # Most things work without it however Promise.all segfaults when not specified
         channel.send(-> { raise rejection; self.type_var })
         nil
       })

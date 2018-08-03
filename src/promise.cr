@@ -33,7 +33,18 @@ abstract class Promise
     ::Promise::ResolvedPromise.new(value)
   end
 
+  # Promise#all for Tuples
   def self.all(*promises)
+    all_common(promises)
+  end
+
+  # Promise#all for Enumerables
+  def self.all(promises)
+    promises = promises.flatten
+    all_common(promises)
+  end
+
+  def self.all_common(promises)
     values = nil
     callback = -> {
       values = promises.map { |promise| promise.value }
