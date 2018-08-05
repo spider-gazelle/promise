@@ -4,8 +4,10 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
     super()
   end
 
-  # return the value directly if the promise is resolved
-  getter value
+  # get the value directly if the promise is resolved
+  def get
+    @value
+  end
 
   def then(&callback : Input -> _)
     result = nil
@@ -18,7 +20,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
         ret = callback.call(value)
         if ret.is_a?(Promise)
           callback_type = ret.type_var
-        else 
+        else
           callback_type = ret
         end
 

@@ -26,7 +26,7 @@ describe Promise do
       p.resolve(:foo)
 
       # wait for resolution
-      change.value.should eq("value type change foo")
+      change.get.should eq("value type change foo")
     end
 
     it "should be able to resolve the callback after it has already been resolved" do
@@ -49,7 +49,7 @@ describe Promise do
       p.then { |value| Log << :first }
       p.then { |value| Log << :second }
       p.resolve(:foo)
-      p.value
+      p.get
 
       Log.should eq([:first, :second])
     end
@@ -73,7 +73,7 @@ describe Promise do
       p1.resolve(p2)
       p2.resolve(:foo)
 
-      p1.value.should eq(:foo)
+      p1.get.should eq(:foo)
       Log.should eq([:foo])
     end
 
@@ -194,7 +194,7 @@ describe Promise do
       p = Promise.new(Symbol)
       p.finally { |value| Log << :finally }
       p.resolve(:foo)
-      p.value
+      p.get
 
       Log.should eq([:finally])
     end
@@ -203,7 +203,7 @@ describe Promise do
       p = Promise.new(Symbol)
       other = p.finally { |value| Log << :finally; :test }.then { |result| Log << result }
       p.resolve(:foo)
-      other.value
+      other.get
 
       Log.should eq([:finally, :test])
     end
@@ -228,7 +228,7 @@ describe Promise do
         Log << result
         Wait.send(true)
       }
-      
+
       p1.resolve(:fin)
 
       spawn do
@@ -253,7 +253,7 @@ describe Promise do
         Log << :error
         Wait.send(true)
       }
-      
+
       p1.resolve(:fin)
 
       spawn do
@@ -272,7 +272,7 @@ describe Promise do
     it "should work with generic types" do
       array = [] of Promise
       array << Promise.new(Symbol).resolve(:foo)
-      array[0].finally { |value| Log << :finally }.value
+      array[0].finally { |value| Log << :finally }.get
       Log.should eq([:finally])
     end
   end
@@ -281,7 +281,7 @@ describe Promise do
     it "should resolve a promise value as a future" do
       p = Promise.new(Symbol)
       p.resolve(:foo)
-      p.value.should eq(:foo)
+      p.get.should eq(:foo)
     end
 
     it "should reject a promise value as a future" do
@@ -289,7 +289,7 @@ describe Promise do
       p.reject("error!")
 
       begin
-        p.value
+        p.get
       rescue error
         error.message.should eq "error!"
       end
@@ -301,7 +301,7 @@ describe Promise do
       p.resolve(:test)
 
       begin
-        result.value
+        result.get
       rescue error
         error.message.should eq "what what"
       end
@@ -320,7 +320,7 @@ describe Promise do
 
   describe "Promise all" do
     it "should resolve if no promises are passed" do
-      result = Promise.all.value.not_nil!
+      result = Promise.all.get.not_nil!
       result[0]?.should eq nil
       result.size.should eq 0
     end
@@ -328,7 +328,7 @@ describe Promise do
     it "should resolve promises and return an array of values" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String).resolve("testing")
-      val1, val2 = Promise.all(p1, p2).value.not_nil!
+      val1, val2 = Promise.all(p1, p2).get.not_nil!
 
       val1.should eq :foo
       val2.should eq "testing"
@@ -339,7 +339,7 @@ describe Promise do
       p2 = Promise.new(String).reject("testing")
 
       begin
-        val1, val2 = Promise.all(p1, p2).value.not_nil!
+        val1, val2 = Promise.all(p1, p2).get.not_nil!
         raise "should not make it here"
       rescue error
         error.message.should eq "testing"
@@ -350,7 +350,7 @@ describe Promise do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String).resolve("testing")
       array = [p1, p2]
-      val1, val2 = Promise.all(array).value.not_nil!
+      val1, val2 = Promise.all(array).get.not_nil!
 
       val1.should eq :foo
       val2.should eq "testing"
@@ -361,7 +361,7 @@ describe Promise do
       array << Promise.new(Symbol).resolve(:foo)
       array << Promise.new(String).resolve("testing")
 
-      val1, val2 = Promise.all(array.map(&.then)).value.not_nil!
+      val1, val2 = Promise.all(array.map(&.then)).get.not_nil!
       val1.should eq nil
       val2.should eq nil
     end
@@ -372,7 +372,7 @@ describe Promise do
       array << Promise.new(String).reject("testing")
 
       begin
-        val1, val2 = Promise.all(array.map(&.then)).value.not_nil!
+        val1, val2 = Promise.all(array.map(&.then)).get.not_nil!
         raise "should not make it here"
       rescue error
         error.message.should eq "testing"
@@ -383,7 +383,7 @@ describe Promise do
   describe "Promise race" do
     it "should throw error if no promises are passed" do
       begin
-        result = Promise.race.value
+        result = Promise.race.get
         raise "no get here"
       rescue error
         error.message.should eq "no promises provided to race"
@@ -394,14 +394,14 @@ describe Promise do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)
       spawn { p2.resolve("testing") }
-      val = Promise.race(p1, p2).value
+      val = Promise.race(p1, p2).get
       val.should eq :foo
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
       spawn { p2.resolve("testing") }
       delay(0.002) { p1.resolve(:foo) }
-      val = Promise.race(p1, p2).value
+      val = Promise.race(p1, p2).get
       val.should eq "testing"
     end
 
@@ -411,7 +411,7 @@ describe Promise do
       spawn { p2.resolve("testing") }
 
       begin
-        val = Promise.race(p1, p2).value
+        val = Promise.race(p1, p2).get
         raise "should not make it here"
       rescue error
         error.message.should eq "err"
@@ -423,7 +423,7 @@ describe Promise do
       delay(0.002) { p1.resolve(:foo) }
 
       begin
-        val = Promise.race(p1, p2).value
+        val = Promise.race(p1, p2).get
         raise "should not make it here"
       rescue error
         error.message.should eq "testing"
@@ -435,7 +435,7 @@ describe Promise do
     it "should run some code asynchronously" do
       result = Promise.defer {
         {123, "string"}
-      }.value.not_nil!
+      }.get.not_nil!
 
       result.should eq({123, "string"})
     end
@@ -444,7 +444,7 @@ describe Promise do
       begin
         Promise.defer {
           raise "an error occured"
-        }.value
+        }.get
         raise "no go"
       rescue result
         result.message.should eq("an error occured")

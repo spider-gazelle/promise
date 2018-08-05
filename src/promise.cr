@@ -81,7 +81,7 @@ abstract class Promise
   collective_action :all do |promises|
     values = nil
     callback = -> {
-      values = promises.map(&.value)
+      values = promises.map(&.get)
       nil
     }
     result = DeferredPromise(typeof(values)).new
@@ -98,12 +98,12 @@ abstract class Promise
 
   # returns the first promise to either reject or complete
   collective_action :race do |promises|
-    raise "no promises provided to race" if promises.empty? 
+    raise "no promises provided to race" if promises.empty?
     result = DeferredPromise(typeof(promises.map(&.type_var)[0]?)).new
     promises.each do |promise|
       promise.finally do
         begin
-          result.resolve(promise.value)
+          result.resolve(promise.get)
         rescue error
           result.reject error
         end

@@ -4,7 +4,7 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     super()
   end
 
-  def value
+  def get
     raise @rejection
   end
 

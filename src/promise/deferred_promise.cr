@@ -44,7 +44,7 @@ class Promise::DeferredPromise(Input) < Promise
         ret = callback.call(value)
         if ret.is_a?(Promise)
           callback_type = ret.type_var
-        else 
+        else
           callback_type = ret
         end
 
@@ -78,7 +78,7 @@ class Promise::DeferredPromise(Input) < Promise
         ret = callback.call(value)
         if ret.is_a?(Promise)
           callback_type = ret.type_var
-        else 
+        else
           callback_type = ret
         end
 
@@ -122,7 +122,7 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   # pause the current fiber and wait for the resolution to occur
-  def value
+  def get
     channel = Channel(Proc(Input)).new
 
     spawn do
@@ -165,7 +165,7 @@ class Promise::DeferredPromise(Input) < Promise
         ret = callback.call(value)
         if ret.is_a?(Promise)
           callback_type = ret.type_var
-        else 
+        else
           callback_type = ret
         end
 

@@ -4,6 +4,11 @@
 
 Provides a fully typed implementation of promises for crystal lang.
 
+## A word of advice
+
+It's good practice to only expose synchronous APIs in crystal lang.
+If you are building a library that uses promises internally, make sure to call `#get` when returning on public interfaces.
+
 
 ## Overview
 
@@ -17,7 +22,7 @@ require "promise"
 # A promise defines the eventual type that will be returned
 promise = Promise.new(String)
 
-# You can then perform some asynchronous action that will resolve the promise 
+# You can then perform some asynchronous action that will resolve the promise
 channel.send {promise, arg1, arg2}
 
 # A callback can be used to access the result.
@@ -44,7 +49,7 @@ end
 # You can also pause execution and wait for the value
 # This will raise an error if the promise was rejected
 begin
-  result = promise.value
+  result = promise.get
 rescue error
   puts error.message
 end
@@ -81,7 +86,7 @@ It rejects with the reason of the first promise that rejects.
 value1, value2 = Promise.all(
   Promise.defer { function1 },
   Promise.defer { function2 }
-).value
+).get
 
 
 # using callbacks
@@ -106,7 +111,7 @@ It will raise an error if no promises are provided.
 Promise.race(
   Promise.defer { sleep rand(0.0..1.0); "p1 wins" },
   Promise.defer { sleep rand(0.0..1.0); "p2 wins" }
-).value
+).get
 
 ```
 
