@@ -59,7 +59,8 @@ end
 
 ## Simple concurrency control
 
-`Promise.defer` is similar to `spawn`, however you can wait for it to complete with a value or error
+`Promise.defer` is similar to `spawn`, however you can wait for it to complete with a value or error.
+The promise type is inferred from the return type of the defer block.
 
 ```crystal
 
@@ -99,6 +100,8 @@ Promise.all(
 end
 
 ```
+
+There are no restrictions placed on return types so function1 can return a String and function2 an Int32, for example.
 
 
 ## Promise.race
@@ -142,7 +145,7 @@ Of course new receivers will probably be added dynamically at runtime
 
 ## Promise chaining
 
-Promises can be chained together.
+Promises can be chained together and the return type of every `.then` block is used to build the next promise, so it is simple to transform values.
 
 ```crystal
 
