@@ -4,7 +4,7 @@ class Promise::Deferred(Input)
     @reference = nil
     @callbacks = [] of {Proc(Input, Nil), Proc(Exception, Nil)}
   end
-  
+
   @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input) | Nil
 
   def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Nil))

@@ -175,7 +175,7 @@ class Promise::DeferredPromise(Input) < Promise
       end
     }
 
-    self.then(->(result : Input) {
+    self.then(->(_result : Input) {
       wrapped_callback.call(nil)
       nil
     }, ->(error : Exception) {
