@@ -1,4 +1,3 @@
-
 class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
   def initialize(@rejection : Exception)
     super()

@@ -1,4 +1,3 @@
-
 class Promise::DeferredPromise(Input) < Promise
   def initialize
     @defer = Deferred(Input).new(self)
@@ -127,12 +126,12 @@ class Promise::DeferredPromise(Input) < Promise
 
     spawn do
       self.then(->(result : Input) {
-        channel.send(-> { result })
+        channel.send(->{ result })
         nil
       }, ->(rejection : Exception) {
         # We provide the type_var here as a hint to the compiler
         # Most things work without it however Promise.all segfaults when not specified
-        channel.send(-> { raise rejection; self.type_var })
+        channel.send(->{ raise rejection; self.type_var })
         nil
       })
     end

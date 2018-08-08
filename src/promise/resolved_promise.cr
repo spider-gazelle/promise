@@ -1,4 +1,3 @@
-
 class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
   def initialize(@value : Input)
     super()

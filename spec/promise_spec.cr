@@ -1,7 +1,7 @@
 require "spec"
 require "../src/promise"
 
-LOG = [] of Symbol | Nil
+LOG  = [] of Symbol | Nil
 WAIT = Channel(Bool).new
 
 describe Promise do
@@ -249,7 +249,7 @@ describe Promise do
       p2 = Promise.new(Symbol)
       p1.finally { |_|
         LOG << :finally; p2
-    }.catch { |_|
+      }.catch { |_|
         LOG << :error
         WAIT.send(true)
       }

@@ -1,4 +1,3 @@
-
 class Promise::Deferred(Input)
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
     @reference = nil
