@@ -85,16 +85,10 @@ abstract class Promise
 
   # Returns the result of all the promises or the first failure
   collective_action :all do |promises|
-    values = nil
-    callback = ->{
-      values = promises.map(&.get)
-      nil
-    }
-    result = DeferredPromise(typeof(values)).new
+    result = DeferredPromise(typeof(promises.map(&.type_var))?).new
     spawn do
       begin
-        callback.call
-        result.resolve(values.not_nil!)
+        result.resolve(promises.map(&.get))
       rescue error
         result.reject(error)
       end
