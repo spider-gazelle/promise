@@ -325,18 +325,25 @@ describe Promise do
       result.size.should eq 0
     end
 
+    it "should resolve if one promises is passed" do
+      p1 = Promise.new(Symbol).resolve(:foo)
+      result = Promise.all(p1).get.not_nil!
+      result[0].should eq :foo
+      result.size.should eq 1
+    end
+
     it "should resolve promises and return an array of values" do
       p1 = Promise.new(Symbol).resolve(:foo)
-      p2 = Promise.new(String).resolve("testing")
+      p2 = Promise.new(Symbol).resolve(:other)
       val1, val2 = Promise.all(p1, p2).get.not_nil!
 
       val1.should eq :foo
-      val2.should eq "testing"
+      val2.should eq :other
     end
 
     it "should reject promise if there are any failures" do
       p1 = Promise.new(Symbol).resolve(:foo)
-      p2 = Promise.new(String).reject("testing")
+      p2 = Promise.new(Symbol).reject("testing")
 
       begin
         val1, val2 = Promise.all(p1, p2).get.not_nil!
@@ -348,12 +355,12 @@ describe Promise do
 
     it "should work when promises are supplied as an array" do
       p1 = Promise.new(Symbol).resolve(:foo)
-      p2 = Promise.new(String).resolve("testing")
+      p2 = Promise.new(Symbol).resolve(:other)
       array = [p1, p2]
       val1, val2 = Promise.all(array).get.not_nil!
 
       val1.should eq :foo
-      val2.should eq "testing"
+      val2.should eq :other
     end
 
     it "should work with unknown or generic jobs that are successful" do
@@ -376,6 +383,28 @@ describe Promise do
         raise "should not make it here #{val1}, #{val2}"
       rescue error
         error.message.should eq "testing"
+      end
+    end
+  end
+
+  describe "deferred code" do
+    it "should run some code asynchronously" do
+      result = Promise.defer {
+        # Tuple
+        {123, "string"}
+      }.get.not_nil!
+
+      result.should eq({123, "string"})
+    end
+
+    it "should return errors asynchronously" do
+      begin
+        Promise.defer {
+          raise "an error occured"
+        }.get
+        raise "no go"
+      rescue result
+        result.message.should eq("an error occured")
       end
     end
   end
@@ -427,27 +456,6 @@ describe Promise do
         raise "should not make it here #{val}"
       rescue error
         error.message.should eq "testing"
-      end
-    end
-  end
-
-  describe "deferred code" do
-    it "should run some code asynchronously" do
-      result = Promise.defer {
-        {123, "string"}
-      }.get.not_nil!
-
-      result.should eq({123, "string"})
-    end
-
-    it "should return errors asynchronously" do
-      begin
-        Promise.defer {
-          raise "an error occured"
-        }.get
-        raise "no go"
-      rescue result
-        result.message.should eq("an error occured")
       end
     end
   end

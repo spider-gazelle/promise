@@ -39,7 +39,7 @@ abstract class Promise
 
   # Returns a resolved promise of the type passed
   def self.resolve(value)
-    value = Nilable.new(value).value if value.class.nilable?
+    value = Nilable.new(value).value unless value.class.nilable?
     ::Promise::ResolvedPromise.new(value)
   end
 
@@ -70,7 +70,11 @@ abstract class Promise
     end
 
     def self.{{name.id}}(promises)
-      promises = promises.flatten
+      if promises.responds_to? :flatten
+        promises = promises.flatten
+      else
+        promises = [promises]
+      end
       {{name.id}}_common(promises)
     end
 
