@@ -121,22 +121,10 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   # pause the current fiber and wait for the resolution to occur
-  def get
-    channel = Channel(Proc(Input)).new
-
-    spawn do
-      self.then(->(result : Input) {
-        channel.send(->{ result })
-        nil
-      }, ->(rejection : Exception) {
-        # We provide the type_var here as a hint to the compiler
-        # Most things work without it however Promise.all segfaults when not specified
-        channel.send(->{ raise rejection; self.type_var })
-        nil
-      })
-    end
-
-    channel.receive.call
+  def get : Input
+    result = raw_value
+    raise result if result.is_a?(Exception)
+    result
   end
 
   def raw_value

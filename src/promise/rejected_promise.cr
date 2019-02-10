@@ -3,7 +3,7 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     super()
   end
 
-  def get
+  def get : Input
     raise @rejection
   end
 

@@ -4,7 +4,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
   end
 
   # get the value directly if the promise is resolved
-  def get
+  def get : Input
     @value
   end
 
