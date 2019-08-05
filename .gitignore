@@ -4,3 +4,5 @@ lib
 .shards
 app
 *.dwarf
+*.lock
+bin/ameba

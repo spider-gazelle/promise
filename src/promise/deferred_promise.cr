@@ -30,7 +30,7 @@ class Promise::DeferredPromise(Input) < Promise
     t
   end
 
-  def type
+  def type : Class
     Input
   end
 
@@ -96,7 +96,7 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   # Used to create a generic promise if all we care about is success or failure
-  def then
+  def then : DeferredPromise(Nil)
     self.then { nil }
   end
 
