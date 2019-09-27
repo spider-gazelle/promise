@@ -14,7 +14,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
     value = @value
 
     # Execute next tick
-    spawn do
+    spawn(same_thread: true) do
       begin
         ret = callback.call(value)
         if ret.is_a?(Promise)

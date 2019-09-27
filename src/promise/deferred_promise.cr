@@ -107,7 +107,7 @@ class Promise::DeferredPromise(Input) < Promise
     wrapped_errback = Proc(Exception, Nil).new { |reason|
       begin
         ret = errback.call(reason)
-        result.resolve(ret)
+        ret.is_a?(Exception) ? result.reject(ret) : result.resolve(ret)
       rescue error
         result.reject(error)
       end
@@ -130,7 +130,7 @@ class Promise::DeferredPromise(Input) < Promise
   def raw_value
     channel = Channel(Input | Exception).new
 
-    spawn do
+    spawn(same_thread: true) do
       self.then(->(result : Input) {
         channel.send(result)
         nil

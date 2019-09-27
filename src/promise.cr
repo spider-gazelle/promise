@@ -1,6 +1,6 @@
 abstract class Promise
   macro new(type)
-    {% if type.id.stringify.includes?('?') || type.id.stringify == "Nil" || type.id.stringify.includes?(" Nil") || type.id.stringify.includes?("Nil ") %}
+    {% if type.resolve.nilable? %}
       ::Promise::DeferredPromise({{type.id}}).new
     {% else %}
       ::Promise::DeferredPromise({{type.id}}?).new
@@ -11,7 +11,7 @@ abstract class Promise
     value = {{reason}}
     value = Exception.new(value) if value.is_a? String
 
-    {% if type.id.stringify.includes?('?') || type.id.stringify == "Nil" || type.id.stringify.includes?(" Nil") || type.id.stringify.includes?("Nil ") %}
+    {% if type.resolve.nilable? %}
       ::Promise::RejectedPromise({{type.id}}).new(value)
     {% else %}
       ::Promise::RejectedPromise({{type.id}}?).new(value)
@@ -49,7 +49,7 @@ abstract class Promise
     result = nil
     promise = nil
 
-    spawn do
+    spawn(same_thread: true) do
       begin
         result = block.call
         promise.not_nil!.resolve(result)
@@ -86,7 +86,7 @@ abstract class Promise
   # Returns the result of all the promises or the first failure
   collective_action :all do |promises|
     result = DeferredPromise(typeof(promises.map(&.type_var))?).new
-    spawn do
+    spawn(same_thread: true) do
       begin
         result.resolve(promises.map(&.get))
       rescue error

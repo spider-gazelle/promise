@@ -12,10 +12,10 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     reason = @rejection
 
     # Execute next tick
-    spawn do
+    spawn(same_thread: true) do
       begin
         ret = errback.call(reason)
-        result.resolve(ret)
+        ret.is_a?(Exception) ? result.reject(ret) : result.resolve(ret)
       rescue error
         result.reject(error)
       end

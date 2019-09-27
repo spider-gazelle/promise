@@ -182,6 +182,7 @@ describe Promise do
         .catch do |error|
           LOG << :error1 if error.message == "errors all the way down"
           WAIT.send(true)
+          error
         end
       p.reject("errors all the way down")
       WAIT.receive
@@ -212,7 +213,7 @@ describe Promise do
       p = Promise.new(Symbol)
       fin = p.finally { |_| LOG << :finally; raise "error" }
       fin.then { |_| LOG << :no_error; WAIT.send(true) }
-      fin.catch { |_| LOG << :error; WAIT.send(true) }
+      fin.catch { |_| LOG << :error; WAIT.send(true); nil }
       p.resolve(:foo)
 
       WAIT.receive
@@ -231,9 +232,9 @@ describe Promise do
 
       p1.resolve(:fin)
 
-      spawn do
-        spawn do
-          spawn do
+      spawn(same_thread: true) do
+        spawn(same_thread: true) do
+          spawn(same_thread: true) do
             LOG << :resolving
             p2.resolve(:foo)
           end
@@ -249,16 +250,17 @@ describe Promise do
       p2 = Promise.new(Symbol)
       p1.finally { |_|
         LOG << :finally; p2
-      }.catch { |_|
+      }.catch { |err|
         LOG << :error
         WAIT.send(true)
+        err
       }
 
       p1.resolve(:fin)
 
-      spawn do
-        spawn do
-          spawn do
+      spawn(same_thread: true) do
+        spawn(same_thread: true) do
+          spawn(same_thread: true) do
             LOG << :rejecting
             p2.reject("error")
           end
@@ -422,13 +424,13 @@ describe Promise do
     it "should return the first promise to be resolved" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)
-      spawn { p2.resolve("testing") }
+      spawn(same_thread: true) { p2.resolve("testing") }
       val = Promise.race(p1, p2).get
       val.should eq :foo
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      spawn { p2.resolve("testing") }
+      spawn(same_thread: true) { p2.resolve("testing") }
       delay(0.002) { p1.resolve(:foo) }
       val = Promise.race(p1, p2).get
       val.should eq "testing"
@@ -437,7 +439,7 @@ describe Promise do
     it "should return the first promise to be rejected" do
       p1 = Promise.new(Symbol).reject("err")
       p2 = Promise.new(String)
-      spawn { p2.resolve("testing") }
+      spawn(same_thread: true) { p2.resolve("testing") }
 
       begin
         val = Promise.race(p1, p2).get
@@ -448,7 +450,7 @@ describe Promise do
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      spawn { p2.reject("testing") }
+      spawn(same_thread: true) { p2.reject("testing") }
       delay(0.002) { p1.resolve(:foo) }
 
       begin
