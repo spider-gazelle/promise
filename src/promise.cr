@@ -45,11 +45,11 @@ abstract class Promise
 
   # Execute code in the next tick of the event loop
   # and return a promise for obtaining the value
-  def self.defer(&block : -> _)
+  def self.defer(same_thread = false, &block : -> _)
     result = nil
     promise = nil
 
-    spawn(same_thread: true) do
+    spawn(same_thread: same_thread) do
       begin
         result = block.call
         promise.not_nil!.resolve(result)

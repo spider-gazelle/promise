@@ -1,19 +1,24 @@
 class Promise::Deferred(Input)
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
+    @mutex = Mutex.new
     @reference = nil
     @callbacks = [] of {Proc(Input, Nil), Proc(Exception, Nil)}
   end
 
   @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input) | Nil
 
-  def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Nil))
-    reference = @reference
-    if reference
-      reference.then(&resolution)
-      reference.catch(&rejection)
-    else
-      @callbacks << {resolution, rejection}
+  def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Nil)) : Nil
+    reference = @mutex.synchronize do
+      ref = @reference
+      if ref.nil?
+        @callbacks << {resolution, rejection}
+        return
+      end
+      ref
     end
+
+    reference.then(&resolution)
+    reference.catch(&rejection)
   end
 
   def resolved?
@@ -21,10 +26,12 @@ class Promise::Deferred(Input)
   end
 
   def resolve(value)
-    return @promise if @reference
+    reference = @mutex.synchronize do
+      return @promise if @reference
 
-    # Save the value as a resovled promise
-    reference = @reference = ref(value)
+      # Save the value as a resovled promise
+      @reference = ref(value)
+    end
 
     # Ensure callbacks are called in strict order
     @callbacks.each do |callback|

@@ -394,7 +394,7 @@ describe Promise do
       result = Promise.defer {
         # Tuple
         {123, "string"}
-      }.get.not_nil!
+      }.get
 
       result.should eq({123, "string"})
     end
