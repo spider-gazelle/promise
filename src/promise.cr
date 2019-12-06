@@ -63,6 +63,16 @@ abstract class Promise
     promise.not_nil!
   end
 
+  macro map(collection, same_thread = false, &block)
+    promise_collection = collection.map do |{{*block.args}}|
+      ::Promise.defer(same_thread: {{same_thread}}) do
+        {{block.body}}
+      end
+    end
+
+    Promise.all(promise_collection)
+  end
+
   # this drys up the code dealing with splats and enumerables
   macro collective_action(name, &block)
     def self.{{name.id}}(*promises)

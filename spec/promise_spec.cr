@@ -411,6 +411,17 @@ describe Promise do
     end
   end
 
+  describe "Promise map" do
+    it "should be able to asynchronously map over a collection" do
+      collection = [1, 2, 3, 4, 5]
+      promise_collection = Promise.map(collection) do |v|
+        sleep 0.002
+        v + 1
+      end
+      promise_collection.get.should eq [2, 3, 4, 5, 6]
+    end
+  end
+
   describe "Promise race" do
     it "should throw error if no promises are passed" do
       begin
