@@ -50,6 +50,10 @@ abstract class Promise
     promise = nil
 
     spawn(same_thread: same_thread) do
+      # We do this to ensure promise is not nil when executing in parallel
+      # effectively a rudimentary spin lock
+      loop { break if promise }
+
       begin
         result = block.call
         promise.not_nil!.resolve(result)

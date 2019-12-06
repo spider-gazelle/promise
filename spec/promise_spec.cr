@@ -390,7 +390,27 @@ describe Promise do
   end
 
   describe "deferred code" do
-    it "should run some code asynchronously" do
+    it "should run some code concurrently" do
+      result = Promise.defer(same_thread: true) {
+        # Tuple
+        {123, "string"}
+      }.get
+
+      result.should eq({123, "string"})
+    end
+
+    it "should return errors concurrently" do
+      begin
+        Promise.defer(same_thread: true) {
+          raise "an error occured"
+        }.get
+        raise "no go"
+      rescue result
+        result.message.should eq("an error occured")
+      end
+    end
+
+    it "should run some code in parallel" do
       result = Promise.defer {
         # Tuple
         {123, "string"}
@@ -399,7 +419,7 @@ describe Promise do
       result.should eq({123, "string"})
     end
 
-    it "should return errors asynchronously" do
+    it "should return errors parallel" do
       begin
         Promise.defer {
           raise "an error occured"
