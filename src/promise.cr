@@ -68,7 +68,7 @@ abstract class Promise
   end
 
   macro map(collection, same_thread = false, &block)
-    %promise_collection = collection.map do |{{*block.args}}|
+    %promise_collection = {{collection}}.map do |{{*block.args}}|
       ::Promise.defer(same_thread: {{same_thread}}) do
         {{block.body}}
       end
