@@ -115,7 +115,7 @@ class Promise::DeferredPromise(Input) < Promise
     wrapped_errback = Proc(Exception, Exception).new { |reason|
       begin
         ret = errback.call(reason)
-        ret.is_a?(Exception) ? result.reject(ret) : result.resolve(ret)
+        ret.is_a?(Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input)) ? result.resolve(ret) : result.reject(ret)
       rescue error
         error.cause = reason unless error == reason
         result.reject(error)
@@ -133,7 +133,7 @@ class Promise::DeferredPromise(Input) < Promise
   # pause the current fiber and wait for the resolution to occur
   def get : Input
     result = raw_value
-    raise result if result.is_a?(Exception)
+    raise result unless result.is_a?(Input)
     result
   end
 

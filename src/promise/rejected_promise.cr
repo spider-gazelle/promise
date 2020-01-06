@@ -15,7 +15,7 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     spawn(same_thread: true) do
       begin
         ret = errback.call(reason)
-        ret.is_a?(Exception) ? result.reject(ret) : result.resolve(ret)
+        ret.is_a?(Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input)) ? result.resolve(ret) : result.reject(ret)
       rescue error
         result.reject(error)
       end
