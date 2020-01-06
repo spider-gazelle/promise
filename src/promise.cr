@@ -44,25 +44,7 @@ abstract class Promise
   # Execute code in the next tick of the event loop
   # and return a promise for obtaining the value
   def self.defer(same_thread = false, &block : -> _)
-    result = nil
-    promise = nil
-
-    spawn(same_thread: same_thread) do
-      # We do this to ensure promise is not nil when executing in parallel
-      # effectively a rudimentary spin lock
-      loop { break if promise }
-
-      begin
-        result = block.call
-        promise.not_nil!.resolve(result)
-      rescue error
-        promise.not_nil!.reject(error)
-      end
-    end
-
-    # Return a promise that can be used to grab the result
-    promise = ::Promise::DeferredPromise(typeof(result)).new
-    promise.not_nil!
+    ImplicitDefer.new(same_thread, &block).execute!
   end
 
   macro map(collection, same_thread = false, &block)

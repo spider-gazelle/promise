@@ -41,13 +41,9 @@ class Promise::DeferredPromise(Input) < Promise
     callback_type = nil
 
     wrapped_callback = Proc(Input, Nil).new { |value|
-      begin
-        ret = callback.call(value)
-        callback_type = ret.__check_for_promise__
-        result.not_nil!.resolve(ret)
-      rescue error
-        result.not_nil!.reject(error)
-      end
+      ret = callback.call(value)
+      callback_type = ret.__check_for_promise__
+      result.not_nil!.resolve(ret)
       nil
     }
 
@@ -67,9 +63,17 @@ class Promise::DeferredPromise(Input) < Promise
 
     # NOTE:: the callback type proc is never called
     generic_type = Generic(typeof(callback_type.not_nil!.call)).new
-    result = DeferredPromise(typeof(generic_type.type_var)).new
-    defer.pending(wrapped_callback, wrapped_errback)
-    result.not_nil!
+    result = res = DeferredPromise(typeof(generic_type.type_var)).new
+
+    defer.pending(->(value : Input) {
+      begin
+        wrapped_callback.call(value)
+      rescue error
+        res.reject(error)
+      end
+      nil
+    }, wrapped_errback)
+    res
   end
 
   # Callback to be executed once the value is available
