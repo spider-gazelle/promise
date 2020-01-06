@@ -79,7 +79,7 @@ abstract class Promise
 
   # Returns the result of all the promises or the first failure
   collective_action :all do |promises|
-    result = DeferredPromise(typeof(promises.map(&.type_var))?).new
+    result = DeferredPromise(typeof(promises.map(&.type_var))).new
     spawn(same_thread: true) do
       begin
         result.resolve(promises.map(&.get))
