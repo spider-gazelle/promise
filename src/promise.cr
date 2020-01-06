@@ -1,21 +1,27 @@
 abstract class Promise
+  class Generic(Inp)
+    macro get_type_var
+      {% if @type.type_vars.includes?(NoReturn) %}
+        t = nil
+      {% else %}
+        t = uninitialized Inp
+      {% end %}
+      t
+    end
+
+    def type_var
+      get_type_var
+    end
+  end
+
   macro new(type)
-    {% if type.resolve.nilable? %}
-      ::Promise::DeferredPromise({{type.id}}).new
-    {% else %}
-      ::Promise::DeferredPromise({{type.id}}?).new
-    {% end %}
+    ::Promise::DeferredPromise({{type.id}}).new
   end
 
   macro reject(type, reason)
     value = {{reason}}
     value = Exception.new(value) if value.is_a? String
-
-    {% if type.resolve.nilable? %}
-      ::Promise::RejectedPromise({{type.id}}).new(value)
-    {% else %}
-      ::Promise::RejectedPromise({{type.id}}?).new(value)
-    {% end %}
+    ::Promise::RejectedPromise({{type.id}}).new(value)
   end
 
   # Interfaces available to generic types
@@ -30,16 +36,8 @@ abstract class Promise
     self.then.catch(&errback)
   end
 
-  # A cheeky way to force a value to be nilable
-  class Nilable(Type)
-    getter value
-
-    def initialize(@value : Type?); end
-  end
-
   # Returns a resolved promise of the type passed
   def self.resolve(value)
-    value = Nilable.new(value).value unless value.class.nilable?
     ::Promise::ResolvedPromise.new(value)
   end
 

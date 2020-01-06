@@ -7,7 +7,7 @@ class Promise::RejectedPromise(Input) < Promise::DeferredPromise(Input)
     raise @rejection
   end
 
-  def catch(&errback : Exception -> _)
+  def catch(&errback : Exception -> Exception | Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input))
     result = DeferredPromise(Input).new
     reason = @rejection
 

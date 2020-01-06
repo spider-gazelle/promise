@@ -17,12 +17,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
     spawn(same_thread: true) do
       begin
         ret = callback.call(value)
-        if ret.is_a?(Promise)
-          callback_type = ret.type_var
-        else
-          callback_type = ret
-        end
-
+        callback_type = ret.__check_for_promise__
         result.not_nil!.resolve(ret)
       rescue error
         result.not_nil!.reject(error)
@@ -30,8 +25,8 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
       nil
     end
 
-    result = DeferredPromise(typeof(callback_type)).new
-    result.not_nil!
+    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
+    result = DeferredPromise(typeof(generic_type.type_var)).new
   end
 
   def resolved?

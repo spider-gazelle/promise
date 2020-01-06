@@ -1,20 +1,28 @@
 class Promise::Deferred(Input)
+  # UNINITIALIZED_ERROR = Exception.new("deferred reference is not yet initialized")
+
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
     @mutex = Mutex.new
-    @reference = nil
-    @callbacks = [] of {Proc(Input, Nil), Proc(Exception, Nil)}
+    @reference = uninitialized DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input)
+    @callbacks = [] of {Proc(Input, Nil), Proc(Exception, Exception)}
   end
 
-  @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input) | Nil
+  @reference : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input)
+  @resolved : Bool = false
 
-  def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Nil)) : Nil
+  # We need to implement this as `@reference` could be uninitialized
+  def inspect(io : IO) : Nil
+    return super if @mutex.synchronize { @resolved }
+    io << {{ @type.name.stringify }}
+  end
+
+  def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Exception)) : Nil
     reference = @mutex.synchronize do
-      ref = @reference
-      if ref.nil?
+      if !@resolved
         @callbacks << {resolution, rejection}
         return
       end
-      ref
+      @reference
     end
 
     reference.then(&resolution)
@@ -22,14 +30,15 @@ class Promise::Deferred(Input)
   end
 
   def resolved?
-    !!@reference
+    @resolved
   end
 
   def resolve(value)
     reference = @mutex.synchronize do
-      return @promise if @reference
+      return @promise if @resolved
 
       # Save the value as a resovled promise
+      @resolved = true
       @reference = ref(value)
     end
 
@@ -45,13 +54,13 @@ class Promise::Deferred(Input)
     @promise
   end
 
-  def reject(reason)
+  def reject(reason : String | Exception)
     reason = Exception.new(reason) if reason.is_a?(String)
     resolve(RejectedPromise(Input).new(reason))
   end
 
-  def ref(value)
-    return value if value.is_a?(Promise)
+  def ref(value : Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input)) : DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input)
+    return value if value.is_a?(DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input))
     ResolvedPromise(Input).new(value)
   end
 end

@@ -1,7 +1,7 @@
 require "spec"
 require "../src/promise"
 
-LOG  = [] of Symbol | Nil
+LOG  = [] of Symbol
 WAIT = Channel(Bool).new
 
 describe Promise do
@@ -213,7 +213,7 @@ describe Promise do
       p = Promise.new(Symbol)
       fin = p.finally { |_| LOG << :finally; raise "error" }
       fin.then { |_| LOG << :no_error; WAIT.send(true) }
-      fin.catch { |_| LOG << :error; WAIT.send(true); nil }
+      fin.catch { |err| LOG << :error; WAIT.send(true); err }
       p.resolve(:foo)
 
       WAIT.receive
@@ -306,6 +306,22 @@ describe Promise do
         result.get
       rescue error
         error.message.should eq "what what"
+      end
+    end
+
+    it "should pass through multiple exceptions" do
+      p = Promise.new(Symbol)
+      result = p.then { raise "what what" }.catch {
+        raise "oh no"
+      }.catch {
+        raise "final error"
+      }
+      p.resolve(:test)
+
+      begin
+        result.get
+      rescue error
+        error.message.should eq "final error"
       end
     end
 

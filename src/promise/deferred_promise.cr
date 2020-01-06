@@ -41,28 +41,31 @@ class Promise::DeferredPromise(Input) < Promise
     wrapped_callback = Proc(Input, Nil).new { |value|
       begin
         ret = callback.call(value)
-        if ret.is_a?(Promise)
-          callback_type = ret.type_var
-        else
-          callback_type = ret
-        end
-
+        callback_type = ret.__check_for_promise__
         result.not_nil!.resolve(ret)
       rescue error
         result.not_nil!.reject(error)
       end
+      nil
     }
 
-    wrapped_errback = Proc(Exception, Nil).new { |reason|
+    wrapped_errback = Proc(Exception, Exception).new { |reason|
       begin
         ret = errback.call(reason)
-        result.not_nil!.resolve(ret)
+        if ret.is_a?(Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input))
+          result.not_nil!.resolve(ret)
+        else
+          result.not_nil!.reject(ret)
+        end
       rescue error
         result.not_nil!.reject(error)
       end
+      reason
     }
 
-    result = DeferredPromise(typeof(callback_type)).new
+    # NOTE:: the callback type proc is never called
+    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
+    result = DeferredPromise(typeof(generic_type.type_var)).new
     defer.pending(wrapped_callback, wrapped_errback)
     result.not_nil!
   end
@@ -73,26 +76,29 @@ class Promise::DeferredPromise(Input) < Promise
     callback_type = nil
 
     wrapped_callback = Proc(Input, Nil).new { |value|
-      begin
-        ret = callback.call(value)
-        if ret.is_a?(Promise)
-          callback_type = ret.type_var
-        else
-          callback_type = ret
-        end
-
-        result.not_nil!.resolve(ret)
-      rescue error
-        result.not_nil!.reject(error)
-      end
+      ret = callback.call(value)
+      callback_type = ret.__check_for_promise__
+      result.not_nil!.resolve(ret)
+      nil
     }
 
-    result = DeferredPromise(typeof(callback_type)).new
-    defer.pending(wrapped_callback, ->(reason : Exception) {
-      result.not_nil!.reject(reason)
+    # NOTE:: the callback type proc is never called
+    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
+    result = res = DeferredPromise(typeof(generic_type.type_var)).new
+
+    defer.pending(->(value : Input) {
+      begin
+        wrapped_callback.call(value)
+      rescue error
+        res.reject(error)
+      end
       nil
+    }, ->(reason : Exception) {
+      result.not_nil!.reject(reason)
+      reason
     })
-    result.not_nil!
+
+    res
   end
 
   # Used to create a generic promise if all we care about is success or failure
@@ -101,16 +107,18 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   # Callback to execute if an error occurs
-  def catch(&errback : Exception -> _)
+  def catch(&errback : Exception -> Exception | Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input))
     result = DeferredPromise(Input).new
 
-    wrapped_errback = Proc(Exception, Nil).new { |reason|
+    wrapped_errback = Proc(Exception, Exception).new { |reason|
       begin
         ret = errback.call(reason)
         ret.is_a?(Exception) ? result.reject(ret) : result.resolve(ret)
       rescue error
+        error.cause = reason
         result.reject(error)
       end
+      reason
     }
 
     defer.pending(->(value : Input) {
@@ -136,41 +144,63 @@ class Promise::DeferredPromise(Input) < Promise
         nil
       }, ->(rejection : Exception) {
         channel.send(rejection)
-        nil
+        rejection
       })
     end
 
     channel.receive
   end
 
-  def finally(&callback : (Exception | Nil) -> _)
+  def finally(&callback : Exception? -> _)
     result = nil
     callback_type = nil
 
-    wrapped_callback = Proc((Exception | Nil), Nil).new { |value|
-      begin
-        ret = callback.call(value)
-        if ret.is_a?(Promise)
-          callback_type = ret.type_var
-        else
-          callback_type = ret
-        end
-
-        result.not_nil!.resolve(ret)
-      rescue error
-        result.not_nil!.reject(error)
-      end
+    wrapped_callback = Proc(Exception?, Nil).new { |value|
+      ret = callback.call(value)
+      callback_type = ret.__check_for_promise__
+      result.not_nil!.resolve(ret)
+      nil
     }
 
-    self.then(->(_result : Input) {
-      wrapped_callback.call(nil)
+    # NOTE:: the callback type proc is never called
+    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
+    result = res = DeferredPromise(typeof(generic_type.type_var)).new
+
+    self.then(->(_result_ : Input) {
+      begin
+        wrapped_callback.call(nil)
+      rescue error
+        res.reject(error)
+      end
       nil
     }, ->(error : Exception) {
-      wrapped_callback.call(error)
-      nil
+      begin
+        wrapped_callback.call(error)
+      rescue error
+        res.reject(error)
+      end
+      error
     })
 
-    result = DeferredPromise(typeof(callback_type)).new
-    result.not_nil!
+    res
   end
+end
+
+class Object
+  macro __check_if_promise__
+    {% if @type.ancestors.includes?(::Promise) %}
+      ret_actual = self.type_var
+      -> { ret_actual }
+    {% else %}
+      -> { self }
+    {% end %}
+  end
+
+  def __check_for_promise__
+    __check_if_promise__
+  end
+end
+
+class Exception
+  property cause : Exception?
 end
