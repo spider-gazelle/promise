@@ -1,6 +1,4 @@
 class Promise::Deferred(Input)
-  # UNINITIALIZED_ERROR = Exception.new("deferred reference is not yet initialized")
-
   def initialize(@promise : DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input))
     @mutex = Mutex.new
     @reference = uninitialized DeferredPromise(Input) | ResolvedPromise(Input) | RejectedPromise(Input)
@@ -13,7 +11,15 @@ class Promise::Deferred(Input)
   # We need to implement this as `@reference` could be uninitialized
   def inspect(io : IO) : Nil
     return super if @mutex.synchronize { @resolved }
+    io << "#<"
     io << {{ @type.name.stringify }}
+    io << ":0x"
+    io << self.object_id.to_s(16)
+    io << " @resolved="
+    @resolved.to_s(io)
+    io << " @callbacks="
+    @callbacks.size.to_s(io)
+    io << ">"
   end
 
   def pending(resolution : Proc(Input, Nil), rejection : Proc(Exception, Exception)) : Nil
