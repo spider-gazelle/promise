@@ -10,8 +10,7 @@ class Promise::DeferredPromise(Input) < Promise
     end
 
     def promise_execute
-      generic_type = Generic(Output).new.type_var
-      promise = DeferredPromise(typeof(generic_type)).new
+      promise = DeferredPromise(typeof(Generic(Output).new.type_var)).new
       execute = Proc(Input, Nil).new do |value|
         begin
           promise.resolve(@callback.call(value))

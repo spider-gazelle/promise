@@ -6,8 +6,7 @@ class Promise::ImplicitDefer(Output)
 
   def execute!
     # Replace NoReturn with Nil if the block will always `raise` an error
-    generic_type = Generic(Output).new
-    promise = DeferredPromise(typeof(generic_type.type_var)).new
+    promise = DeferredPromise(typeof(Generic(Output).new.type_var)).new
 
     spawn(same_thread: @same_thread) do
       begin

@@ -1,3 +1,5 @@
+require "tasker"
+
 abstract class Promise
   class Generic(Output)
     macro get_type_var
@@ -15,8 +17,38 @@ abstract class Promise
     end
   end
 
-  macro new(type)
-    ::Promise::DeferredPromise({{type.id}}).new
+  class Timeout < Exception
+  end
+
+  macro new(type, timeout = nil)
+    {% if timeout %}
+      begin
+        %promise = ::Promise::DeferredPromise({{type.id}}).new
+        %task = Tasker.instance.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
+        %promise.finally { %task.cancel }
+        %promise
+      end
+    {% else %}
+      ::Promise::DeferredPromise({{type.id}}).new
+    {% end %}
+  end
+
+  # Execute code in the next tick of the event loop
+  # and return a promise for obtaining the value
+  macro defer(same_thread = false, timeout = nil, &block)
+    begin
+      %promise = ::Promise::ImplicitDefer.new({{same_thread}}) {
+        {{block.body}}
+      }.execute!
+
+      {% if timeout %}
+        %task = Tasker.instance.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
+        %promise.finally { |err| %task.cancel unless err.is_a?(::Promise::Timeout) }
+        %promise
+      {% end %}
+
+      %promise
+    end
   end
 
   macro reject(type, reason)
@@ -40,12 +72,6 @@ abstract class Promise
   # Returns a resolved promise of the type passed
   def self.resolve(value)
     ::Promise::ResolvedPromise.new(value)
-  end
-
-  # Execute code in the next tick of the event loop
-  # and return a promise for obtaining the value
-  def self.defer(same_thread = false, &block : -> _)
-    ImplicitDefer.new(same_thread, &block).execute!
   end
 
   macro map(collection, same_thread = false, &block)
