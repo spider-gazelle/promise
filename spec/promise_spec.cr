@@ -22,7 +22,7 @@ describe Promise do
 
     it "should work with resolved promises" do
       p = Promise.resolve(:testing)
-      p.then { |value| LOG << value; raise "issue" }.catch { |issue| LOG << :invalid; nil }
+      p.then { |value| LOG << value; raise "issue" }.catch { |_| LOG << :invalid; nil }
 
       # WAIT for resolution
       Fiber.yield
