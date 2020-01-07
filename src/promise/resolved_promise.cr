@@ -9,7 +9,7 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
 
     def execute!
       # Replace NoReturn with Nil if the block will always `raise` an error
-      generic_type = Generic(Output).new.type_var.__check_for_promise__
+      generic_type = Generic(Output).new.type_var
       promise = DeferredPromise(typeof(generic_type)).new
 
       spawn(same_thread: true) do
