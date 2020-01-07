@@ -20,6 +20,16 @@ describe Promise do
       LOG.should eq([:foo])
     end
 
+    it "should work with resolved promises" do
+      p = Promise.resolve(:testing)
+      p.then { |value| LOG << value; raise "issue" }.catch { |issue| LOG << :invalid; nil }
+
+      # WAIT for resolution
+      Fiber.yield
+
+      LOG.should eq([:testing, :invalid])
+    end
+
     it "can modify the result of a promise before returning" do
       p = Promise.new(Symbol)
       change = p.then { |value| "value type change #{value}" }

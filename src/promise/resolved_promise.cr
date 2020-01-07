@@ -3,30 +3,34 @@ class Promise::ResolvedPromise(Input) < Promise::DeferredPromise(Input)
     super()
   end
 
+  class ResolvedDefer(Input, Output)
+    def initialize(@input : Input, &@block : Input -> Output)
+    end
+
+    def execute!
+      # Replace NoReturn with Nil if the block will always `raise` an error
+      generic_type = Generic(Output).new
+      promise = DeferredPromise(typeof(generic_type.type_var)).new
+
+      spawn(same_thread: true) do
+        begin
+          promise.resolve(@block.call(@input))
+        rescue error
+          promise.reject(error)
+        end
+      end
+
+      promise
+    end
+  end
+
   # get the value directly if the promise is resolved
   def get : Input
     @value
   end
 
   def then(&callback : Input -> _)
-    result = nil
-    callback_type = nil
-    value = @value
-
-    # Execute next tick
-    spawn(same_thread: true) do
-      begin
-        ret = callback.call(value)
-        callback_type = ret.__check_for_promise__
-        result.not_nil!.resolve(ret)
-      rescue error
-        result.not_nil!.reject(error)
-      end
-      nil
-    end
-
-    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
-    result = DeferredPromise(typeof(generic_type.type_var)).new
+    ResolvedDefer.new(@value, &callback).execute!
   end
 
   def resolved?
