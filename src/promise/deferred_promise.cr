@@ -5,6 +5,25 @@ class Promise::DeferredPromise(Input) < Promise
     @defer = Deferred(Input).new(self)
   end
 
+  class PromiseResolver(Input, Output)
+    def initialize(input_type : Input, &@callback : Input -> Output)
+    end
+
+    def promise_execute
+      generic_type = Generic(Output).new.type_var
+      promise = DeferredPromise(typeof(generic_type)).new
+      execute = Proc(Input, Nil).new do |value|
+        begin
+          promise.resolve(@callback.call(value))
+        rescue error
+          promise.reject(error)
+        end
+        nil
+      end
+      {promise, execute}
+    end
+  end
+
   # Shortcut for @defer as it can be nil due to self being used
   # before we assigned the promise class to @defer
   private def defer
@@ -37,74 +56,36 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   def then(callback : Input -> _, errback : Exception -> _)
-    result = nil
-    callback_type = nil
-
-    wrapped_callback = Proc(Input, Nil).new { |value|
-      ret = callback.call(value)
-      callback_type = ret.__check_for_promise__
-      result.not_nil!.resolve(ret)
-      nil
-    }
+    promise, wrapped_callback = PromiseResolver.new(type_var, &callback).promise_execute
 
     wrapped_errback = Proc(Exception, Exception).new { |reason|
       begin
         ret = errback.call(reason)
         if ret.is_a?(Input | DeferredPromise(Input) | RejectedPromise(Input) | ResolvedPromise(Input))
-          result.not_nil!.resolve(ret)
+          promise.resolve(ret)
         else
-          result.not_nil!.reject(ret)
+          promise.reject(ret)
         end
       rescue error
-        result.not_nil!.reject(error)
+        promise.reject(error)
       end
       reason
     }
 
-    # NOTE:: the callback type proc is never called
-    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
-    result = res = DeferredPromise(typeof(generic_type.type_var)).new
-
-    defer.pending(->(value : Input) {
-      begin
-        wrapped_callback.call(value)
-      rescue error
-        res.reject(error)
-      end
-      nil
-    }, wrapped_errback)
-    res
+    defer.pending(wrapped_callback, wrapped_errback)
+    promise
   end
 
   # Callback to be executed once the value is available
   def then(&callback : Input -> _)
-    result = nil
-    callback_type = nil
+    promise, wrapped_callback = PromiseResolver.new(type_var, &callback).promise_execute
 
-    wrapped_callback = Proc(Input, Nil).new { |value|
-      ret = callback.call(value)
-      callback_type = ret.__check_for_promise__
-      result.not_nil!.resolve(ret)
-      nil
-    }
-
-    # NOTE:: the callback type proc is never called
-    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
-    result = res = DeferredPromise(typeof(generic_type.type_var)).new
-
-    defer.pending(->(value : Input) {
-      begin
-        wrapped_callback.call(value)
-      rescue error
-        res.reject(error)
-      end
-      nil
-    }, ->(reason : Exception) {
-      result.not_nil!.reject(reason)
+    defer.pending(wrapped_callback, ->(reason : Exception) {
+      promise.reject(reason)
       reason
     })
 
-    res
+    promise
   end
 
   # Used to create a generic promise if all we care about is success or failure
@@ -158,36 +139,17 @@ class Promise::DeferredPromise(Input) < Promise
   end
 
   def finally(&callback : Exception? -> _)
-    result = nil
-    callback_type = nil
-
-    wrapped_callback = Proc(Exception?, Nil).new { |value|
-      ret = callback.call(value)
-      callback_type = ret.__check_for_promise__
-      result.not_nil!.resolve(ret)
-      nil
-    }
-
-    # NOTE:: the callback type proc is never called
-    generic_type = Generic(typeof(callback_type.not_nil!.call)).new
-    result = res = DeferredPromise(typeof(generic_type.type_var)).new
+    type_var = uninitialized Exception?
+    promise, wrapped_callback = PromiseResolver.new(type_var, &callback).promise_execute
 
     self.then(->(_result_ : Input) {
-      begin
-        wrapped_callback.call(nil)
-      rescue error
-        res.reject(error)
-      end
+      wrapped_callback.call(nil)
       nil
     }, ->(error : Exception) {
-      begin
-        wrapped_callback.call(error)
-      rescue error
-        res.reject(error)
-      end
+      wrapped_callback.call(error)
       error
     })
 
-    res
+    promise
   end
 end

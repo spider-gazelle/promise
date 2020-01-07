@@ -1,16 +1,17 @@
 abstract class Promise
-  class Generic(Inp)
+  class Generic(Output)
     macro get_type_var
       {% if @type.type_vars.includes?(NoReturn) %}
         t = nil
       {% else %}
-        t = uninitialized Inp
+        t = uninitialized Output
       {% end %}
       t
     end
 
+    # NOTE:: This uses the core extension for detecting Promise type
     def type_var
-      get_type_var
+      get_type_var.__check_for_promise__
     end
   end
 

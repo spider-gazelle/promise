@@ -1,13 +1,13 @@
 class Object
   macro __check_if_promise__
     {% if @type.ancestors.includes?(::Promise) %}
-      ret_actual = self.type_var
-      -> { ret_actual }
+      self.type_var
     {% else %}
-      -> { self }
+      self
     {% end %}
   end
 
+  # NOTE:: Used by Promise::Generic
   def __check_for_promise__
     __check_if_promise__
   end
