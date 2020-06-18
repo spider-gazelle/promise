@@ -74,14 +74,15 @@ abstract class Promise
     ::Promise::ResolvedPromise.new(value)
   end
 
-  macro map(collection, same_thread = false, &block)
-    %promise_collection = {{collection}}.map do |{{*block.args}}|
-      ::Promise.defer(same_thread: {{same_thread}}) do
-        {{block.body}}
+  # Asynchronously map an `Enumerable`
+  def self.map(collection : Enumerable(T), same_thread = false, &block : T -> V) forall T, V
+    promise_collection = collection.map do |element|
+      ::Promise.defer(same_thread: same_thread) do
+        block.call(element)
       end
     end
 
-    Promise.all(%promise_collection)
+    Promise.all(promise_collection)
   end
 
   # this drys up the code dealing with splats and enumerables
