@@ -24,7 +24,7 @@ abstract class Promise
     {% if timeout %}
       begin
         %promise = ::Promise::DeferredPromise({{type.id}}).new
-        %task = Tasker.instance.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
+        %task = Tasker.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
         %promise.finally { %task.cancel }
         %promise
       end
@@ -42,7 +42,7 @@ abstract class Promise
       }.execute!
 
       {% if timeout %}
-        %task = Tasker.instance.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
+        %task = Tasker.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
         %promise.finally { |err| %task.cancel unless err.is_a?(::Promise::Timeout) }
         %promise
       {% end %}

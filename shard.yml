@@ -1,9 +1,10 @@
 name: promise
-version: 2.2.0
+version: 2.2.1
 
 dependencies:
   tasker:
     github: spider-gazelle/tasker
+    version: ~> 2.0
 
 development_dependencies:
   ameba:
