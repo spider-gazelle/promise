@@ -1,6 +1,6 @@
 # Crystal Lang Promises
 
-[![Build Status](https://travis-ci.org/spider-gazelle/promise.svg?branch=master)](https://travis-ci.org/spider-gazelle/promise)
+[![CI](https://github.com/spider-gazelle/promise/actions/workflows/ci.yml/badge.svg)](https://github.com/spider-gazelle/promise/actions/workflows/ci.yml)
 
 Provides a fully typed implementation of promises for crystal lang.
 

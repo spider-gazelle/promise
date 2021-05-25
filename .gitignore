@@ -5,4 +5,5 @@ lib
 app
 *.dwarf
 *.lock
-bin/ameba
+bin
+*.DS_Store
