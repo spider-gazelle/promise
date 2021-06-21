@@ -488,7 +488,10 @@ describe Promise do
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
       spawn(same_thread: true) { p2.resolve("testing") }
-      delay(0.002) { p1.resolve(:foo) }
+      spawn do
+        sleep 0.002
+        p1.resolve(:foo)
+      end
       val = Promise.race(p1, p2).get
       val.should eq "testing"
     end
@@ -508,7 +511,10 @@ describe Promise do
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
       spawn(same_thread: true) { p2.reject("testing") }
-      delay(0.002) { p1.resolve(:foo) }
+      spawn do
+        sleep 0.002
+        p1.resolve(:foo)
+      end
 
       begin
         val = Promise.race(p1, p2).get

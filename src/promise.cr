@@ -1,5 +1,3 @@
-require "tasker"
-
 abstract class Promise
   class Generic(Output)
     macro get_type_var
@@ -20,12 +18,22 @@ abstract class Promise
   class Timeout < Exception
   end
 
+  def self.timeout(promise : Promise, time : Time::Span)
+    cancel = Channel(Bool).new(1)
+    promise.then { cancel.send(true) }
+
+    select
+    when cancel.receive
+    when timeout(time)
+      promise.reject(::Promise::Timeout.new("operation timeout"))
+    end
+  end
+
   macro new(type, timeout = nil)
     {% if timeout %}
       begin
         %promise = ::Promise::DeferredPromise({{type.id}}).new
-        %task = Tasker.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
-        %promise.finally { %task.cancel }
+        spawn { ::Promise.timeout(%promise, {{timeout}}) }
         %promise
       end
     {% else %}
@@ -42,8 +50,7 @@ abstract class Promise
       }.execute!
 
       {% if timeout %}
-        %task = Tasker.in({{timeout}}) { %promise.reject(::Promise::Timeout.new("operation timeout")) }
-        %promise.finally { |err| %task.cancel unless err.is_a?(::Promise::Timeout) }
+        spawn { ::Promise.timeout(%promise, {{timeout}}) }
         %promise
       {% end %}
 
