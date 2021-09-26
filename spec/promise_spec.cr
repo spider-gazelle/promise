@@ -236,7 +236,7 @@ describe Promise do
       p1.finally { |_|
         LOG << :finally; p2
       }.then { |result|
-        LOG << result
+        LOG << result.get
         WAIT.send(true)
       }
 
@@ -255,34 +255,8 @@ describe Promise do
       LOG.should eq([:finally, :resolving, :foo])
     end
 
-    it "should reject with the new reason when it is rejected" do
-      p1 = Promise.new(Symbol)
-      p2 = Promise.new(Symbol)
-      p1.finally { |_|
-        LOG << :finally; p2
-      }.catch { |err|
-        LOG << :error
-        WAIT.send(true)
-        err
-      }
-
-      p1.resolve(:fin)
-
-      spawn(same_thread: true) do
-        spawn(same_thread: true) do
-          spawn(same_thread: true) do
-            LOG << :rejecting
-            p2.reject("error")
-          end
-        end
-      end
-
-      WAIT.receive
-      LOG.should eq([:finally, :rejecting, :error])
-    end
-
     it "should work with generic types" do
-      array = [] of Promise
+      array = [] of Promise(Symbol)
       array << Promise.new(Symbol).resolve(:foo)
       array[0].finally { |_| LOG << :finally }.get
       LOG.should eq([:finally])
@@ -348,7 +322,7 @@ describe Promise do
 
   describe "Promise all" do
     it "should resolve if no promises are passed" do
-      result = Promise.all.get.not_nil!
+      result = Promise.all([] of Promise(String)).get.not_nil!
       result[0]?.should eq nil
       result.size.should eq 0
     end
@@ -392,7 +366,7 @@ describe Promise do
     end
 
     it "should work with unknown or generic jobs that are successful" do
-      array = [] of Promise
+      array = [] of Promise(Symbol) | Promise(String)
       array << Promise.new(Symbol).resolve(:foo)
       array << Promise.new(String).resolve("testing")
 
@@ -402,7 +376,7 @@ describe Promise do
     end
 
     it "should work with unknown or generic jobs that fail" do
-      array = [] of Promise
+      array = [] of Promise(Symbol) | Promise(String)
       array << Promise.new(Symbol).resolve(:foo)
       array << Promise.new(String).reject("testing")
 
@@ -412,6 +386,14 @@ describe Promise do
       rescue error
         error.message.should eq "testing"
       end
+    end
+
+    it "should work with different types" do
+      Promise.all(
+        Promise.defer { 1.3 },
+        Promise.defer { 2 },
+        Promise.defer { "string" }
+      ).get.should eq({1.3, 2, "string"})
     end
   end
 
@@ -471,7 +453,7 @@ describe Promise do
   describe "Promise race" do
     it "should throw error if no promises are passed" do
       begin
-        result = Promise.race.get
+        result = Promise.race([] of Promise(String)).get
         raise "no get here #{result}"
       rescue error
         error.message.should eq "no promises provided to race"
@@ -522,6 +504,13 @@ describe Promise do
       rescue error
         error.message.should eq "testing"
       end
+    end
+
+    it "should work with different types" do
+      Promise.race(
+        Promise.defer { sleep 1; 1.3 },
+        Promise.defer { "string" }
+      ).get.should eq "string"
     end
   end
 end

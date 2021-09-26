@@ -1,6 +1,6 @@
 require "./core_ext"
 
-class Promise::DeferredPromise(Input) < Promise
+class Promise::DeferredPromise(Input) < Promise(Input)
   def initialize
     @defer = Deferred(Input).new(self)
   end

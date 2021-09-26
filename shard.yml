@@ -1,6 +1,6 @@
 name: promise
-version: 2.2.3
-crystal: ">= 0.36.1"
+version: 3.0.0
+crystal: ">= 1.0.0"
 
 development_dependencies:
   ameba:

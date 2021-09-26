@@ -1,4 +1,4 @@
-abstract class Promise
+abstract class Promise(Input)
   class Generic(Output)
     macro get_type_var
       {% if @type.type_vars.includes?(NoReturn) %}
@@ -43,19 +43,10 @@ abstract class Promise
 
   # Execute code in the next tick of the event loop
   # and return a promise for obtaining the value
-  macro defer(same_thread = false, timeout = nil, &block)
-    begin
-      %promise = ::Promise::ImplicitDefer.new({{same_thread}}) {
-        {{block.body}}
-      }.execute!
-
-      {% if timeout %}
-        spawn { ::Promise.timeout(%promise, {{timeout}}) }
-        %promise
-      {% end %}
-
-      %promise
-    end
+  def self.defer(same_thread = false, timeout = nil, &block : -> _)
+    promise = ::Promise::ImplicitDefer.new(same_thread, &block).execute!
+    spawn { ::Promise.timeout(promise, timeout) } if timeout
+    promise
   end
 
   macro reject(type, reason)
@@ -128,11 +119,11 @@ abstract class Promise
   # returns the first promise to either reject or complete
   collective_action :race do |promises|
     raise "no promises provided to race" if promises.empty?
-    result = DeferredPromise(typeof(promises.map(&.type_var)[0]?)).new
+    result = DeferredPromise(typeof(Enumerable.element_type(promises.map(&.type_var)))).new
     promises.each do |promise|
       promise.finally do
         begin
-          result.resolve(promise.get)
+          result.resolve(promise.get.as(typeof(Enumerable.element_type(promises.map(&.type_var)))))
         rescue error
           result.reject error
         end
