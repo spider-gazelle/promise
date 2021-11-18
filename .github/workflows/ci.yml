@@ -32,16 +32,8 @@ jobs:
           crystal: ${{ matrix.crystal }}
       - name: Install dependencies
         run: shards install --ignore-crystal-version
-      - name: Run tests
-        run: crystal spec -v --order random --error-trace ${{ matrix.mt && '-Dpreview_mt' || '' }}
-      - uses: covera
+      - name: Run coverage
+        uses: PlaceOS/.github/.github/actions/crystal-coverage@main
+        with:
+          arguments: --executable-args='--order=random --error-trace ${{ matrix.mt && '-Dpreview_mt' || '' }}'
 
-  coverage:
-    steps:
-    - uses: actions/checkout@v2
-    - name: Install crystal
-      uses: crystal-lang/install-crystal@v1.5.3
-      with:
-        crystal: ${{ matrix.crystal }}
-    - name: Run tests
-      uses: PlaceOS/.github/.github/actions/crystal-coverage@main
