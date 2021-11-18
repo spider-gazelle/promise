@@ -23,6 +23,10 @@ jobs:
         include:
           - crystal: nightly
             stable: false
+            MT: true
+          - crystal: nightly
+            stable: false
+            MT: false
     runs-on: ubuntu-latest
     continue-on-error: ${{ !matrix.stable }}
     steps:
