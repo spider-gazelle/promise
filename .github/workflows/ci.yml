@@ -4,25 +4,44 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
+
 jobs:
-  build:
+  style:
+    uses: PlaceOS/.github/.github/workflows/crystal-style.yml@main
+
+  test:
+    name: "${{ !matrix.stable && '🚧 ' || ''}}crystal: ${{ matrix.crystal }}, MT: ${{ matrix.MT }}"
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        stable: [true]
         crystal:
-          - latest
-          - nightly
           - 1.1.1
-    runs-on: ${{ matrix.os }}
-    container: crystallang/crystal:${{ matrix.crystal }}-alpine
+          - 1.2.1
+          - 1.2.2
+        include:
+          - crystal: nightly
+            stable: false
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ !matrix.stable }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install crystal
+        uses: crystal-lang/install-crystal@v1.5.3
+        with:
+          crystal: ${{ matrix.crystal }}
+      - name: Install dependencies
+        run: shards install --ignore-crystal-version
+      - name: Run tests
+        run: crystal spec -v --order random --error-trace ${{ matrix.mt && '-Dpreview_mt' || '' }}
+      - uses: covera
+
+  coverage:
     steps:
     - uses: actions/checkout@v2
-    - name: Install dependencies
-      run: shards install --ignore-crystal-version
-    - name: Lint
-      run: ./bin/ameba
-    - name: Format
-      run: crystal tool format --check
+    - name: Install crystal
+      uses: crystal-lang/install-crystal@v1.5.3
+      with:
+        crystal: ${{ matrix.crystal }}
     - name: Run tests
-      run: crystal spec -v --error-trace
+      uses: PlaceOS/.github/.github/actions/crystal-coverage@main
