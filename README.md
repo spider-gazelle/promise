@@ -118,6 +118,17 @@ Promise.race(
 
 ```
 
+## Promise.map
+
+Promise also support asynchronous maps over Enumerable types, yielding an array of the
+resolved elements.
+
+```crystal
+Promise.map([1, 2, 3]) do |x|
+  sleep x
+  x
+end.sum # => 6
+```
 
 ## Multiple receivers
 
