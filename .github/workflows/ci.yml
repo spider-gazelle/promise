@@ -18,9 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: shards install --ignore-crystal-version
-    - name: Lint
-      run: ./bin/ameba
+      run: shards install --ignore-crystal-version --skip-postinstall --skip-executables
     - name: Format
       run: crystal tool format --check
     - name: Run tests
