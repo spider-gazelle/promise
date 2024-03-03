@@ -26,7 +26,7 @@ class Promise::DeferredPromise(Input) < Promise(Input)
   # Shortcut for @defer as it can be nil due to self being used
   # before we assigned the promise class to @defer
   private def defer
-    @defer.not_nil!
+    @defer.as(Deferred(Input))
   end
 
   # Has the promise value been resolved?

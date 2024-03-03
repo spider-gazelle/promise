@@ -66,7 +66,7 @@ describe Promise do
 
     it "should do nothing if a promise was previously resolved" do
       p = Promise.new(Symbol)
-      p.then { |value| LOG << value.not_nil! }
+      p.then { |value| LOG << value }
       p.resolve(:first)
       p.resolve(:second)
       p.then { |value| LOG << value; WAIT.send(true) }
@@ -91,7 +91,7 @@ describe Promise do
       p = Promise.new(Symbol)
       p.then do |_|
         LOG << :outer
-        p.then do |__|
+        p.then do |_res|
           LOG << :inner
           WAIT.send(true)
         end
@@ -322,14 +322,14 @@ describe Promise do
 
   describe "Promise all" do
     it "should resolve if no promises are passed" do
-      result = Promise.all([] of Promise(String)).get.not_nil!
+      result = Promise.all([] of Promise(String)).get
       result[0]?.should eq nil
       result.size.should eq 0
     end
 
     it "should resolve if one promises is passed" do
       p1 = Promise.new(Symbol).resolve(:foo)
-      result = Promise.all(p1).get.not_nil!
+      result = Promise.all(p1).get
       result[0].should eq :foo
       result.size.should eq 1
     end
@@ -337,7 +337,7 @@ describe Promise do
     it "should resolve promises and return a tuple of values" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(Symbol).resolve(:other)
-      val1, val2 = Promise.all(p1, p2).get.not_nil!
+      val1, val2 = Promise.all(p1, p2).get
 
       val1.should eq :foo
       val2.should eq :other
@@ -348,7 +348,7 @@ describe Promise do
       p2 = Promise.new(Symbol).reject("testing")
 
       begin
-        val1, val2 = Promise.all(p1, p2).get.not_nil!
+        val1, val2 = Promise.all(p1, p2).get
         raise "should not make it here #{val1}, #{val2}"
       rescue error
         error.message.should eq "testing"
@@ -359,7 +359,7 @@ describe Promise do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(Symbol).resolve(:other)
       array = [p1, p2]
-      val1, val2 = Promise.all(array).get.not_nil!
+      val1, val2 = Promise.all(array).get
 
       val1.should eq :foo
       val2.should eq :other
@@ -370,7 +370,7 @@ describe Promise do
       array << Promise.new(Symbol).resolve(:foo)
       array << Promise.new(String).resolve("testing")
 
-      val1, val2 = Promise.all(array.map(&.then)).get.not_nil!
+      val1, val2 = Promise.all(array.map(&.then)).get
       val1.should eq nil
       val2.should eq nil
     end
@@ -381,7 +381,7 @@ describe Promise do
       array << Promise.new(String).reject("testing")
 
       begin
-        val1, val2 = Promise.all(array.map(&.then)).get.not_nil!
+        val1, val2 = Promise.all(array.map(&.then)).get
         raise "should not make it here #{val1}, #{val2}"
       rescue error
         error.message.should eq "testing"
@@ -416,8 +416,8 @@ describe Promise do
           raise "an error occured"
         }.get
         raise "no go"
-      rescue result
-        result.message.should eq("an error occured")
+      rescue error
+        error.message.should eq("an error occured")
       end
     end
 
@@ -436,8 +436,8 @@ describe Promise do
           raise "an error occured"
         }.get
         raise "no go"
-      rescue result
-        result.message.should eq("an error occured")
+      rescue error
+        error.message.should eq("an error occured")
       end
     end
   end
