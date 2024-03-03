@@ -334,7 +334,7 @@ describe Promise do
       result.size.should eq 1
     end
 
-    it "should resolve promises and return an array of values" do
+    it "should resolve promises and return a tuple of values" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(Symbol).resolve(:other)
       val1, val2 = Promise.all(p1, p2).get.not_nil!
@@ -389,11 +389,14 @@ describe Promise do
     end
 
     it "should work with different types" do
-      Promise.all(
+      result = Promise.all(
         Promise.defer { 1.3 },
         Promise.defer { 2 },
         Promise.defer { "string" }
-      ).get.should eq({1.3, 2, "string"})
+      ).get
+
+      typeof(result).should eq(Tuple(Float64, Int32, String))
+      result.should eq({1.3, 2, "string"})
     end
   end
 

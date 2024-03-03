@@ -1,3 +1,23 @@
+def static_map_type_var(*t : *T) forall T
+  {% begin %}
+    Tuple.new(
+      {% for i in 0...T.size %}
+        t[{{i}}].type_var,
+      {% end %}
+    )
+  {% end %}
+end
+
+def static_map_get(*t : *T) forall T
+  {% begin %}
+    Tuple.new(
+      {% for i in 0...T.size %}
+        t[{{i}}].get,
+      {% end %}
+    )
+  {% end %}
+end
+
 abstract class Promise(Input)
   class Generic(Output)
     macro get_type_var
@@ -86,7 +106,7 @@ abstract class Promise(Input)
   # this drys up the code dealing with splats and enumerables
   macro collective_action(name, &block)
     def self.{{name.id}}(*promises)
-      {{name.id}}_common(promises)
+      {{block.body}}
     end
 
     def self.{{name.id}}(promises)
@@ -95,16 +115,30 @@ abstract class Promise(Input)
       else
         promises = [promises]
       end
-      {{name.id}}_common(promises)
-    end
 
-    def self.{{name.id}}_common(promises)
       {{block.body}}
     end
   end
 
-  # Returns the result of all the promises or the first failure
-  collective_action :all do |promises|
+  def self.all(*promises)
+    result = DeferredPromise(typeof(static_map_type_var(*promises))).new
+    spawn(same_thread: true) do
+      begin
+        result.resolve(static_map_get(*promises))
+      rescue error
+        result.reject(error)
+      end
+    end
+    result
+  end
+
+  def self.all(promises)
+    if promises.responds_to? :flatten
+      promises = promises.flatten
+    else
+      promises = [promises]
+    end
+
     result = DeferredPromise(typeof(promises.map(&.type_var))).new
     spawn(same_thread: true) do
       begin
