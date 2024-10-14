@@ -63,8 +63,8 @@ abstract class Promise(Input)
 
   # Execute code in the next tick of the event loop
   # and return a promise for obtaining the value
-  def self.defer(same_thread = false, timeout = nil, &block : -> _)
-    promise = ::Promise::ImplicitDefer.new(same_thread, &block).execute!
+  def self.defer(timeout = nil, &block : -> _)
+    promise = ::Promise::ImplicitDefer.new(&block).execute!
     spawn { ::Promise.timeout(promise, timeout) } if timeout
     promise
   end
@@ -93,9 +93,9 @@ abstract class Promise(Input)
   end
 
   # Asynchronously map an `Enumerable`
-  def self.map(collection : Enumerable(T), same_thread = false, &block : T -> V) forall T, V
+  def self.map(collection : Enumerable(T), &block : T -> V) forall T, V
     promise_collection = collection.map do |element|
-      ::Promise.defer(same_thread: same_thread) do
+      ::Promise.defer do
         block.call(element)
       end
     end
@@ -122,7 +122,7 @@ abstract class Promise(Input)
 
   def self.all(*promises)
     result = DeferredPromise(typeof(static_map_type_var(*promises))).new
-    spawn(same_thread: true) do
+    spawn do
       begin
         result.resolve(static_map_get(*promises))
       rescue error
@@ -140,7 +140,7 @@ abstract class Promise(Input)
     end
 
     result = DeferredPromise(typeof(promises.map(&.type_var))).new
-    spawn(same_thread: true) do
+    spawn do
       begin
         result.resolve(promises.map(&.get))
       rescue error

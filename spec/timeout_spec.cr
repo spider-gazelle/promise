@@ -8,15 +8,15 @@ describe "promise timeouts" do
   end
 
   it "should timeout a defer" do
-    p = Promise.defer(timeout: 1.millisecond) { sleep 1; "p1 wins" }
+    p = Promise.defer(timeout: 1.millisecond) { sleep 1.seconds; "p1 wins" }
     expect_raises(Promise::Timeout) { p.get }
   end
 
   it "should timeout a race" do
     expect_raises(Promise::Timeout) do
       Promise.race(
-        Promise.defer(timeout: 1.millisecond) { sleep 1; "p1 wins" },
-        Promise.defer { sleep 1; "p2 wins" }
+        Promise.defer(timeout: 1.millisecond) { sleep 1.seconds; "p1 wins" },
+        Promise.defer { sleep 1.seconds; "p2 wins" }
       ).get
     end
   end

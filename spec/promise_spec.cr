@@ -242,9 +242,9 @@ describe Promise do
 
       p1.resolve(:fin)
 
-      spawn(same_thread: true) do
-        spawn(same_thread: true) do
-          spawn(same_thread: true) do
+      spawn do
+        spawn do
+          spawn do
             LOG << :resolving
             p2.resolve(:foo)
           end
@@ -402,7 +402,7 @@ describe Promise do
 
   describe "deferred code" do
     it "should run some code concurrently" do
-      result = Promise.defer(same_thread: true) {
+      result = Promise.defer {
         # Tuple
         {123, "string"}
       }.get
@@ -412,7 +412,7 @@ describe Promise do
 
     it "should return errors concurrently" do
       begin
-        Promise.defer(same_thread: true) {
+        Promise.defer {
           raise "an error occured"
         }.get
         raise "no go"
@@ -446,7 +446,7 @@ describe Promise do
     it "should be able to asynchronously map over a collection" do
       collection = [1, 2, 3, 4, 5]
       promise_collection = Promise.map(collection) do |v|
-        sleep 0.002
+        sleep 0.002.seconds
         v + 1
       end
       promise_collection.get.should eq [2, 3, 4, 5, 6]
@@ -466,15 +466,15 @@ describe Promise do
     it "should return the first promise to be resolved" do
       p1 = Promise.new(Symbol).resolve(:foo)
       p2 = Promise.new(String)
-      spawn(same_thread: true) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
       val = Promise.race(p1, p2).get
       val.should eq :foo
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      spawn(same_thread: true) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
       spawn do
-        sleep 0.002
+        sleep 0.002.seconds
         p1.resolve(:foo)
       end
       val = Promise.race(p1, p2).get
@@ -484,7 +484,7 @@ describe Promise do
     it "should return the first promise to be rejected" do
       p1 = Promise.new(Symbol).reject("err")
       p2 = Promise.new(String)
-      spawn(same_thread: true) { p2.resolve("testing") }
+      spawn { p2.resolve("testing") }
 
       begin
         val = Promise.race(p1, p2).get
@@ -495,9 +495,9 @@ describe Promise do
 
       p1 = Promise.new(Symbol)
       p2 = Promise.new(String)
-      spawn(same_thread: true) { p2.reject("testing") }
+      spawn { p2.reject("testing") }
       spawn do
-        sleep 0.002
+        sleep 0.002.seconds
         p1.resolve(:foo)
       end
 
@@ -511,7 +511,7 @@ describe Promise do
 
     it "should work with different types" do
       Promise.race(
-        Promise.defer { sleep 1; 1.3 },
+        Promise.defer { sleep 1.seconds; 1.3 },
         Promise.defer { "string" }
       ).get.should eq "string"
     end
