@@ -124,7 +124,7 @@ class Promise::DeferredPromise(Input) < Promise(Input)
   def raw_value
     channel = Channel(Input | Exception).new
 
-    spawn do
+    spawn(name: "promise_deferred") do
       self.then(->(result : Input) {
         channel.send(result)
         nil

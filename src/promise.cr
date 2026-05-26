@@ -53,7 +53,7 @@ abstract class Promise(Input)
     {% if timeout %}
       begin
         %promise = ::Promise::DeferredPromise({{type.id}}).new
-        spawn { ::Promise.timeout(%promise, {{timeout}}) }
+        spawn(name: "promise_timeout") { ::Promise.timeout(%promise, {{timeout}}) }
         %promise
       end
     {% else %}
@@ -65,7 +65,7 @@ abstract class Promise(Input)
   # and return a promise for obtaining the value
   def self.defer(timeout = nil, &block : -> _)
     promise = ::Promise::ImplicitDefer.new(&block).execute!
-    spawn { ::Promise.timeout(promise, timeout) } if timeout
+    spawn(name: "promise_timeout") { ::Promise.timeout(promise, timeout) } if timeout
     promise
   end
 
@@ -122,7 +122,7 @@ abstract class Promise(Input)
 
   def self.all(*promises)
     result = DeferredPromise(typeof(static_map_type_var(*promises))).new
-    spawn do
+    spawn(name: "promise_all") do
       begin
         result.resolve(static_map_get(*promises))
       rescue error
@@ -140,7 +140,7 @@ abstract class Promise(Input)
     end
 
     result = DeferredPromise(typeof(promises.map(&.type_var))).new
-    spawn do
+    spawn(name: "promise_all") do
       begin
         result.resolve(promises.map(&.get))
       rescue error
